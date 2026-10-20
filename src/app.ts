@@ -2,8 +2,8 @@
 // the rows are ordered cheapest first and checked a few at a time — over
 // DNS first, then at the registry's RDAP server, through api/check where a
 // registry refuses browsers. model.ts holds the parts with no DOM in them.
-import { best, judge, money, order, parse, type Availability, type RdapAnswer, type Row, type Sort, type Tables } from "./model";
-import { refusal } from "./refusal.js";
+import { best, icannReserved, judge, money, order, parse, shortLabelHint, type Availability, type RdapAnswer, type Row, type Sort, type Tables } from "./model";
+import { answer404 } from "./refusal.js";
 
 declare const __VERSION__: string;
 const PAGE = 60;
@@ -172,7 +172,7 @@ function updateRow(row: Row) {
   const st = li.querySelector(".state")!;
   st.innerHTML = (icon ? `<svg class="ico" aria-hidden="true"><use href="#${icon}"/></svg>` : "") + text;
   if (row.via) st.setAttribute("title", row.via === "dns" ? "Answered by DNS: the name has nameservers" : "Answered by the registry's RDAP server");
-  li.querySelector(".note")!.textContent = row.note ? `The registry says: “${row.note}”` : "";
+  li.querySelector(".note")!.textContent = row.note ?? "";
 }
 
 function pump() {
@@ -218,11 +218,23 @@ async function check(row: Row, signal: AbortSignal) {
   } catch (e) {
     if (signal.aborted) throw e;
   }
+  const label = row.domain.slice(0, -(row.ext.tld.length + 1));
+  if (dns !== "has-ns") {
+    // Withheld under every gTLD's registry agreement: the rule answers, not a server.
+    const icann = icannReserved(label, row.ext.tld);
+    if (icann) {
+      row.state = "reserved";
+      row.note = icann;
+      row.via = undefined;
+      return;
+    }
+  }
   let rdap: RdapAnswer | "none" = "none";
   if (dns !== "has-ns" && row.ext.rdap) rdap = await askRdap(row, signal);
   const v = judge(dns, rdap);
   row.state = v.state;
   row.via = v.via;
+  if ((v.state === "available" || v.state === "maybe") && !row.note) row.note = shortLabelHint(label, row.ext.tld) ?? undefined;
 }
 
 async function askRdap(row: Row, signal: AbortSignal): Promise<RdapAnswer> {
@@ -231,8 +243,9 @@ async function askRdap(row: Row, signal: AbortSignal): Promise<RdapAnswer> {
     try {
       const r = await fetch(`${server}domain/${row.domain}`, { headers: { accept: "application/rdap+json" }, signal: timed(signal) });
       if (r.status === 200) return "found";
-      // A 404 is "no such domain" unless the registry's words say the name is withheld.
-      if (r.status === 404) return withheld(row, await r.json().catch(() => null));
+      // A 404 is "no such domain" unless the registry's words say the name
+      // is withheld, or the body is a web server's page and not an answer.
+      if (r.status === 404) return withheld(row, await r.text());
       return "unavailable";
     } catch (e) {
       if (signal.aborted) throw e;
@@ -243,7 +256,7 @@ async function askRdap(row: Row, signal: AbortSignal): Promise<RdapAnswer> {
     const r = await fetch(`api/check?domain=${row.domain}`, { signal: timed(signal) });
     const j = (await r.json()) as { registered: boolean | null; reserved?: string };
     if (j.reserved) {
-      row.note = j.reserved;
+      row.note = said(j.reserved);
       return "reserved";
     }
     return j.registered === true ? "found" : j.registered === false ? "not-found" : "unavailable";
@@ -253,12 +266,13 @@ async function askRdap(row: Row, signal: AbortSignal): Promise<RdapAnswer> {
   }
 }
 
-function withheld(row: Row, body: unknown): "not-found" | "reserved" {
-  const why = refusal(body);
-  if (!why) return "not-found";
-  row.note = why;
-  return "reserved";
+function withheld(row: Row, text: string): RdapAnswer {
+  const a = answer404(text);
+  if (a.note) row.note = said(a.note);
+  return a.state;
 }
+
+const said = (words: string) => `The registry says: “${words}”`;
 
 function updateStatus() {
   const win = ordered.slice(0, shown);

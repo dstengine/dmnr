@@ -3,8 +3,8 @@
 // the api/check handler refuses. Run: npm test
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { best, judge, money, order, parse, rdapFor } from "../src/model.ts";
-import { refusal } from "../src/refusal.js";
+import { best, icannReserved, judge, money, order, parse, rdapFor, shortLabelHint } from "../src/model.ts";
+import { answer404, refusal } from "../src/refusal.js";
 import check from "../api/check.js";
 
 const known = ["com", "uk", "co.uk", "xyz", "co"];
@@ -97,6 +97,28 @@ test("refusal: a registry's reason for withholding a name", () => {
   assert.equal(refusal({ errorCode: 404, title: "Object not found", description: ["??????? ????????????   \r\nThe name you are trying to register is reserved by the Registry. Please visit the Registry?s Reserved Names Policy at http://en.nic.wang/policy.html or contact your registrar for further information. \r\n  "] }),
     "The name you are trying to register is reserved by the Registry. Please visit the Registry’s Reserved Names Policy at http://en.nic.wang/policy.html or…");
 });
+test("answer404: an RDAP error, an empty body, or a web server's page", () => {
+  assert.deepEqual(answer404('{"errorCode":404,"title":"Object not found","description":["Object not found"]}'), { state: "not-found" });
+  assert.deepEqual(answer404(""), { state: "not-found" });
+  assert.deepEqual(answer404('{"errorCode":404,"title":"Error in processing request","description":["example.shop is a reserved name"]}'), { state: "reserved", note: "example.shop is a reserved name" });
+  assert.deepEqual(answer404("<!doctype html><html lang=\"en\"><head><title>HTTP Status 404 – Not Found</title>"), { state: "unavailable" });
+  assert.deepEqual(answer404("{}"), { state: "not-found" });
+  assert.deepEqual(answer404("404 Not found"), { state: "not-found" });
+});
+test("icannReserved: the Specification 5 labels, in generic extensions only", () => {
+  assert.match(icannReserved("example", "info"), /ICANN/);
+  assert.match(icannReserved("www", "xyz"), /reserved/i);
+  assert.equal(icannReserved("example", "uk"), null);
+  assert.equal(icannReserved("example", "co.uk"), null);
+  assert.equal(icannReserved("coffee", "bar"), null);
+});
+test("shortLabelHint: one and two characters, in generic extensions only", () => {
+  assert.match(shortLabelHint("ab", "xyz"), /premium/);
+  assert.match(shortLabelHint("x", "lol"), /premium/);
+  assert.equal(shortLabelHint("x", "co.bz"), null);
+  assert.equal(shortLabelHint("ab", "uk"), null);
+  assert.equal(shortLabelHint("abc", "xyz"), null);
+});
 test("refusal: a plain 'no such domain' is not a reason", () => {
   assert.equal(refusal({ errorCode: 404, title: "Object not found", description: ["Object not found"] }), null);
   assert.equal(refusal({ errorCode: 404, title: "Not found", description: ["No data found"] }), null);
@@ -119,6 +141,12 @@ test("api/check refuses what is not a domain", async () => {
   for (const domain of ["", "nodots", "-bad.com", "a b.com", "x".repeat(64) + ".com", "../etc"]) {
     assert.equal((await call({ domain })).code, 400, domain);
   }
+});
+test("api/check knows the servers the bootstrap lacks", async () => {
+  // nic.io is registered; a 200 from Identity Digital says so (network).
+  const out = await call({ domain: "nic.io" });
+  assert.equal(out.body.server, "https://rdap.identitydigital.services/rdap/");
+  assert.equal(out.body.registered, true);
 });
 test("api/check answers null where no registry publishes RDAP", async () => {
   const out = await call({ domain: "example.no-such-tld-zz" });

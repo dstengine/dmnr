@@ -7,7 +7,8 @@ beside the first-year one.
 - `src/` — the page, its styles, and the search (`app.ts`), with the parts
   that need no browser in `model.ts`.
 - `data/` — the tables the page ships: Porkbun's and GoDaddy's prices, the
-  IANA RDAP bootstrap and the root-zone list. `node tools/prices.mjs`
+  IANA RDAP bootstrap, the root-zone list, and `rdap-extra.json`, the RDAP
+  servers the bootstrap lacks (io, me, de, ch, us…), each checked by hand. `node tools/prices.mjs`
   refreshes them (one source as an argument: `porkbun`, `godaddy`, `rdap`,
   `iana`); the GoDaddy pass takes ten minutes at its rate limit and needs
   `GODADDY_API_KEY` in `../.env`.

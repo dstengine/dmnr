@@ -134,7 +134,7 @@ main { max-width: 640px; margin: 0 auto; padding: 0 16px; }
 .from, .note { display: none; margin: 4px 0 0; color: var(--muted); font-size: .85rem; }
 .note { overflow-wrap: anywhere; }
 .row[data-state="taken"] .offers, .row[data-state="reserved"] .offers { display: none; }
-.row[data-state="taken"] .from, .row[data-state="reserved"] .note { display: block; }
+.row[data-state="taken"] .from, .note:not(:empty) { display: block; }
 .rows[data-only-free] .row[data-state="taken"], .rows[data-only-free] .row[data-state="reserved"] { display: none; }
 .more-row { margin: 12px 0 0; }
 

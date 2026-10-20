@@ -23,9 +23,11 @@ for (const scheme of ["light", "dark"]) {
   const page = await ctx.newPage();
   const errors = [], foreign = new Set();
   page.on("pageerror", (e) => errors.push(e.message));
-  // A 404 from a registry is "no such domain", the answer wanted, and a CORS
-  // refusal is what api/check is there for; Chromium logs both as errors.
-  const expected = /status of 404|CORS policy|net::ERR_FAILED/;
+  // A 404 from a registry is "no such domain", the answer wanted; a 403 or
+  // 429 is a registry's rate limit, which the page answers with "ask the
+  // registrar"; a CORS refusal is what api/check is there for. Chromium
+  // logs all of them as errors.
+  const expected = /status of (?:404|403|429)|CORS policy|net::ERR_FAILED/;
   page.on("console", (m) => m.type() === "error" && !expected.test(m.text()) && errors.push(m.text()));
   page.on("request", (r) => !r.url().startsWith(BASE) && foreign.add(new URL(r.url()).host));
 

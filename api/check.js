@@ -11,15 +11,17 @@
 //
 //   → { "domain": "coffee.bar", "registered": false, "reserved": "This domain has been reserved…", "server": "…" }
 import { readFileSync } from "node:fs";
-import { refusal } from "../src/refusal.js";
+import { answer404 } from "../src/refusal.js";
 
 const servers = JSON.parse(readFileSync(new URL("../data/rdap.json", import.meta.url), "utf8")).tlds;
+// Registries the IANA bootstrap does not list, checked by hand (see the file).
+const extra = JSON.parse(readFileSync(new URL("../data/rdap-extra.json", import.meta.url), "utf8")).tlds;
 const DOMAIN = /^(?=.{3,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 
 function serverFor(domain) {
   const parts = domain.split(".").slice(1);
   for (let i = 0; i < parts.length; i++) {
-    const s = servers[parts.slice(i).join(".")];
+    const s = servers[parts.slice(i).join(".")] ?? extra[parts.slice(i).join(".")];
     if (s) return s;
   }
   return null;
@@ -46,8 +48,9 @@ export default async function handler(req, res) {
     });
     if (r.status === 200) res.status(200).json({ domain, registered: true, server });
     else if (r.status === 404) {
-      const reserved = refusal(await r.json().catch(() => null));
-      res.status(200).json(reserved ? { domain, registered: false, reserved, server } : { domain, registered: false, server });
+      const a = answer404(await r.text());
+      if (a.state === "unavailable") res.status(200).json({ domain, registered: null, server, status: 404, error: "not an RDAP answer" });
+      else res.status(200).json(a.note ? { domain, registered: false, reserved: a.note, server } : { domain, registered: false, server });
     }
     else res.status(200).json({ domain, registered: null, server, status: r.status });
   } catch (e) {

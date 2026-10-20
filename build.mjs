@@ -23,14 +23,14 @@ if (existsSync(pub)) cpSync(pub, dist(), { recursive: true });
 // and a price for one of those is not a price for a domain. A price of
 // zero is Porkbun's placeholder for an extension it cannot sell yet.
 const json = (f) => JSON.parse(readFileSync(data(f), "utf8"));
-const porkbun = json("porkbun.json"), godaddy = json("godaddy.json"), rdap = json("rdap.json");
+const porkbun = json("porkbun.json"), godaddy = json("godaddy.json"), rdap = json("rdap.json"), extra = json("rdap-extra.json");
 const iana = new Set(json("iana.json").tlds);
 const real = (tld) => iana.has(tld.split(".").pop());
 const sold = (p) => p && p[0] > 0 && p[1] > 0 ? p : null;
 const rdapFor = (tld) => {
   const parts = tld.split(".");
   for (let i = 0; i < parts.length; i++) {
-    const s = rdap.tlds[parts.slice(i).join(".")];
+    const s = rdap.tlds[parts.slice(i).join(".")] ?? extra.tlds[parts.slice(i).join(".")];
     if (s) return s;
   }
   return null;

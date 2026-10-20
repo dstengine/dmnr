@@ -31,7 +31,7 @@ export interface Row {
   state: Availability;
   /** What answered: dns, rdap, or nothing yet. */
   via?: "dns" | "rdap";
-  /** The registry's own words, when it said the name is withheld. */
+  /** Why the name is withheld, as the row shows it: the registry's own words, or the rule. */
   note?: string;
 }
 
@@ -129,6 +129,26 @@ export function rdapFor(tld: string, servers: Record<string, string | null | und
     if (s) return s;
   }
   return null;
+}
+
+/** Labels every gTLD must withhold under its ICANN registry agreement
+    (Specification 5: registry operations and RFC 2606), which the
+    registries' RDAP servers mostly answer with a plain "not found". A
+    two-letter top label is a country code with rules of its own. */
+const ICANN_RESERVED = new Set(["example", "nic", "www", "whois", "rdds"]);
+export function icannReserved(label: string, tld: string): string | null {
+  const top = tld.split(".").pop()!;
+  if (top.length <= 2 || !ICANN_RESERVED.has(label)) return null;
+  return "Reserved in every generic extension by ICANN's registry agreement (Specification 5), not by this registry alone.";
+}
+
+/** Two-character names: ICANN reserved every one, most registries have
+    since had them released and sell them as premium names. Either way the
+    standard price is not the price, which the row should say. */
+export function shortLabelHint(label: string, tld: string): string | null {
+  const top = tld.split(".").pop()!;
+  if (top.length <= 2 || label.length > 2) return null;
+  return "Two-character names are withheld or sold as premium names in most generic extensions, so the standard price shown is unlikely to apply.";
 }
 
 /** A row's state from the two answers a check can collect. */

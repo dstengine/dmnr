@@ -11,6 +11,20 @@ const WITHHELD = /not available for registration|reserved|reservation|restrict|p
 const PREFACE = /^(?:not found|object not found|error (?:in )?processing request|\d+)$/i;
 const MAX = 160;
 
+/** What a 404 means, from its body: no such domain (an RDAP error, a bare
+    "404 Not found" as .ws sends, or nothing at all, as Verisign sends), a
+    name the registry withholds (an RDAP error with a reason), or no answer
+    at all (a web server's HTML page: rdap.nic.ms sends one for every
+    name, its own nic.ms included). */
+export function answer404(text) {
+  const t = String(text ?? "").trim();
+  if (/<html|<!doctype/i.test(t)) return { state: "unavailable" };
+  let body = null;
+  try { body = JSON.parse(t); } catch {}
+  const note = refusal(body);
+  return note ? { state: "reserved", note } : { state: "not-found" };
+}
+
 /** The registry's own words when its 404 says the name is withheld, else null. */
 export function refusal(body) {
   if (!body || typeof body !== "object") return null;
