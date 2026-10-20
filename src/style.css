@@ -115,9 +115,9 @@ main { max-width: 640px; margin: 0 auto; padding: 0 16px; }
 .dom b { color: var(--accent); font-weight: 700; }
 .state { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: .78rem; font-weight: 600; white-space: nowrap; padding: 3px 9px; border-radius: 999px; background: var(--tint); color: var(--muted); }
 .row[data-state="available"] .state, .row[data-state="maybe"] .state { background: var(--ok-tint); color: var(--ok); }
-.row[data-state="taken"] .state { background: var(--line); color: var(--ink); }
+.row[data-state="taken"] .state, .row[data-state="reserved"] .state { background: var(--line); color: var(--ink); }
 .row[data-state="checking"] .state, .row[data-state="idle"] .state { background: none; border: 1px solid var(--line); }
-.row[data-state="taken"] .dom, .row[data-state="taken"] .dom b { color: var(--muted); }
+.row[data-state="taken"] .dom, .row[data-state="taken"] .dom b, .row[data-state="reserved"] .dom, .row[data-state="reserved"] .dom b { color: var(--muted); }
 .offers { display: grid; gap: 6px; margin-top: 8px; }
 .offer {
   display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px;
@@ -131,10 +131,11 @@ main { max-width: 640px; margin: 0 auto; padding: 0 16px; }
 .offer .price { font-weight: 700; white-space: nowrap; }
 .offer .renew { color: var(--muted); font-size: .75rem; white-space: nowrap; }
 .offer .ico { color: var(--muted); }
-.from { display: none; margin: 4px 0 0; color: var(--muted); font-size: .85rem; }
-.row[data-state="taken"] .offers { display: none; }
-.row[data-state="taken"] .from { display: block; }
-.rows[data-only-free] .row[data-state="taken"] { display: none; }
+.from, .note { display: none; margin: 4px 0 0; color: var(--muted); font-size: .85rem; }
+.note { overflow-wrap: anywhere; }
+.row[data-state="taken"] .offers, .row[data-state="reserved"] .offers { display: none; }
+.row[data-state="taken"] .from, .row[data-state="reserved"] .note { display: block; }
+.rows[data-only-free] .row[data-state="taken"], .rows[data-only-free] .row[data-state="reserved"] { display: none; }
 .more-row { margin: 12px 0 0; }
 
 /* ---- about */

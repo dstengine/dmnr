@@ -41,7 +41,7 @@ for (const scheme of ["light", "dark"]) {
   await page.waitForFunction(() => document.querySelectorAll(".row").length === 60);
   await page.waitForFunction(() => /extensions checked/.test(document.querySelector("[data-status]").textContent), null, { timeout: 120000 });
   const states = await page.$$eval(".row", (rows) => rows.map((r) => r.dataset.state));
-  const tally = Object.fromEntries(["available", "taken", "maybe", "unknown"].map((s) => [s, states.filter((x) => x === s).length]));
+  const tally = Object.fromEntries(["available", "taken", "reserved", "maybe", "unknown"].map((s) => [s, states.filter((x) => x === s).length]));
   assert.ok(tally.available >= 1, `no available row for ${fresh}: ${JSON.stringify(tally)}`);
   assert.ok(tally.taken <= 3, `a fresh name is taken in ${tally.taken} extensions`);
   // Half, not all: the rdap.nic.* registries limit queries per IP and a few
@@ -65,6 +65,16 @@ for (const scheme of ["light", "dark"]) {
   await page.waitForFunction(() => document.querySelector(".row .dom")?.textContent === "dmnr.uk");
   await page.waitForFunction(() => document.querySelector(".row").dataset.state === "taken", null, { timeout: 30000 });
   assert.equal(await page.$eval(".row .from", (e) => e.textContent.includes("$")), true, "a taken row still names its price");
+
+  // A name the registry withholds: not available, and the registry's words shown.
+  await page.fill("[data-q]", "coffee.bar");
+  await page.waitForFunction(() => document.querySelector(".row .dom")?.textContent === "coffee.bar");
+  await page.waitForFunction(() => document.querySelector(".row").dataset.state === "reserved", null, { timeout: 30000 });
+  assert.match(await page.textContent(".row .note"), /reserved/i, "the registry's reason is not shown");
+  assert.equal(await page.$eval(".row .offers", (e) => getComputedStyle(e).display), "none", "a reserved row still offers to buy");
+  await page.screenshot({ path: `${shots}/reserved-320-${scheme}.png` });
+  await page.fill("[data-q]", "dmnr.uk");
+  await page.waitForFunction(() => document.querySelector(".row")?.dataset.state === "taken", null, { timeout: 30000 });
 
   // Available only hides the taken rows; A–Z keeps the pinned row first.
   await page.click("[data-only-free]");

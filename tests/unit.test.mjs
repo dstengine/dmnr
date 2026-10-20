@@ -4,6 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { best, judge, money, order, parse, rdapFor } from "../src/model.ts";
+import { refusal } from "../src/refusal.js";
 import check from "../api/check.js";
 
 const known = ["com", "uk", "co.uk", "xyz", "co"];
@@ -75,10 +76,37 @@ test("judge", () => {
   assert.deepEqual(judge("has-ns", "none"), { state: "taken", via: "dns" });
   assert.deepEqual(judge("no-ns", "found"), { state: "taken", via: "rdap" });
   assert.deepEqual(judge("no-ns", "not-found"), { state: "available", via: "rdap" });
+  assert.deepEqual(judge("no-ns", "reserved"), { state: "reserved", via: "rdap" });
+  assert.deepEqual(judge("has-ns", "reserved"), { state: "taken", via: "dns" });
   assert.deepEqual(judge("failed", "not-found"), { state: "available", via: "rdap" });
   assert.deepEqual(judge("no-ns", "none"), { state: "maybe", via: "dns" });
   assert.deepEqual(judge("no-ns", "unavailable"), { state: "unknown" });
   assert.deepEqual(judge("failed", "none"), { state: "unknown" });
+});
+
+// Real 404 bodies, as the registries sent them on 21 Oct 2026.
+test("refusal: a registry's reason for withholding a name", () => {
+  assert.equal(refusal({ errorCode: 404, title: "Not Found", description: ["Domain Name: coffee.bar", "This name is not available for registration:", "This domain has been reserved for future strategic use.\nIf you represent a brand or partner with a unique opportunity, we’d love to hear from you — contact info@ideas.bar"] }),
+    "This domain has been reserved for future strategic use. If you represent a brand or partner with a unique opportunity, we’d love to hear from you — contact…");
+  assert.equal(refusal({ errorCode: 404, title: "Not Found", description: ["Domain Name: example.pw", "This name is not available for registration:", "Registry Blocked"] }), "Registry Blocked");
+  assert.equal(refusal({ errorCode: 404, title: "Not Found", description: ["Domain Name: example.bar", "This name is not available for registration:", "IANA Reserved"] }), "IANA Reserved");
+  assert.equal(refusal({ errorCode: 404, title: "Error in processing request", description: ["example.shop is a reserved name"] }), "example.shop is a reserved name");
+  assert.equal(refusal({ errorCode: 404, title: "01044", description: ["The domain name requested has usage restrictions applied to it. Please see your Registrar for more details."] }),
+    "The domain name requested has usage restrictions applied to it. Please see your Registrar for more details.");
+  assert.equal(refusal({ errorCode: 404, title: "Object not found", description: ["The domain you request is prohibited.\r\n"] }), "The domain you request is prohibited.");
+  assert.equal(refusal({ errorCode: 404, title: "Object not found", description: ["??????? ????????????   \r\nThe name you are trying to register is reserved by the Registry. Please visit the Registry?s Reserved Names Policy at http://en.nic.wang/policy.html or contact your registrar for further information. \r\n  "] }),
+    "The name you are trying to register is reserved by the Registry. Please visit the Registry’s Reserved Names Policy at http://en.nic.wang/policy.html or…");
+});
+test("refusal: a plain 'no such domain' is not a reason", () => {
+  assert.equal(refusal({ errorCode: 404, title: "Object not found", description: ["Object not found"] }), null);
+  assert.equal(refusal({ errorCode: 404, title: "Not found", description: ["No data found"] }), null);
+  assert.equal(refusal({ errorCode: 404, description: ["Domain zq84f42092.bar is available for registration", "Please visit https://rdap.registry.bar/registrars/ for a list of accredited registrars"] }), null);
+  assert.equal(refusal({ errorCode: 404, title: "Not Found", description: ["Domain Not Found", "zqc73b0324.id"] }), null);
+  assert.equal(refusal({ errorCode: 404, title: "Not Found", description: ["© 2026 Example Registry. All rights reserved."] }), null);
+  assert.equal(refusal({ errorCode: 404 }), null);
+  assert.equal(refusal({}), null);
+  assert.equal(refusal(null), null);
+  assert.equal(refusal("<!doctype html><title>404</title>"), null);
 });
 
 const call = async (query) => {

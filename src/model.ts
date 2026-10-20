@@ -20,7 +20,10 @@ export interface Tables {
   tlds: Record<string, Extension>;
 }
 
-export type Availability = "idle" | "checking" | "available" | "taken" | "maybe" | "unknown";
+export type Availability = "idle" | "checking" | "available" | "taken" | "reserved" | "maybe" | "unknown";
+
+/** What the registry's RDAP server said: a record, no record, a name it withholds, or no usable answer. */
+export type RdapAnswer = "found" | "not-found" | "reserved" | "unavailable";
 
 export interface Row {
   domain: string;
@@ -28,6 +31,8 @@ export interface Row {
   state: Availability;
   /** What answered: dns, rdap, or nothing yet. */
   via?: "dns" | "rdap";
+  /** The registry's own words, when it said the name is withheld. */
+  note?: string;
 }
 
 export interface Query {
@@ -127,9 +132,10 @@ export function rdapFor(tld: string, servers: Record<string, string | null | und
 }
 
 /** A row's state from the two answers a check can collect. */
-export function judge(dns: "has-ns" | "no-ns" | "failed", rdap: "found" | "not-found" | "unavailable" | "none"): { state: Availability; via?: "dns" | "rdap" } {
+export function judge(dns: "has-ns" | "no-ns" | "failed", rdap: RdapAnswer | "none"): { state: Availability; via?: "dns" | "rdap" } {
   if (dns === "has-ns") return { state: "taken", via: "dns" };
   if (rdap === "found") return { state: "taken", via: "rdap" };
+  if (rdap === "reserved") return { state: "reserved", via: "rdap" };
   if (rdap === "not-found") return { state: "available", via: "rdap" };
   if (dns === "no-ns" && rdap === "none") return { state: "maybe", via: "dns" };
   return { state: "unknown" };

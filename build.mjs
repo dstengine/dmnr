@@ -53,7 +53,7 @@ const asOf = porkbun.asOf === gdAsOf ? day(porkbun.asOf) : `${day(porkbun.asOf)}
 // The version is the hash of what ships, so an unchanged build keeps its
 // cache and a changed one replaces it.
 const hash = createHash("sha256");
-for (const f of ["app.ts", "model.ts", "style.css", "index.html", "icon.svg"]) hash.update(readFileSync(src(f)));
+for (const f of ["app.ts", "model.ts", "refusal.js", "style.css", "index.html", "icon.svg"]) hash.update(readFileSync(src(f)));
 hash.update(readFileSync(dist("data.json")));
 const version = hash.digest("hex").slice(0, 10);
 

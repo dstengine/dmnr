@@ -6,8 +6,12 @@
 //   → { "domain": "example.co.uk", "registered": false, "server": "https://rdap.nominet.uk/uk/" }
 //
 // registered is true, false, or null when no server answers for the
-// extension (nothing is guessed from that).
+// extension (nothing is guessed from that). A registry that answers 404
+// with words saying the name is withheld gets those words passed on:
+//
+//   → { "domain": "coffee.bar", "registered": false, "reserved": "This domain has been reserved…", "server": "…" }
 import { readFileSync } from "node:fs";
+import { refusal } from "../src/refusal.js";
 
 const servers = JSON.parse(readFileSync(new URL("../data/rdap.json", import.meta.url), "utf8")).tlds;
 const DOMAIN = /^(?=.{3,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
@@ -41,7 +45,10 @@ export default async function handler(req, res) {
       signal: AbortSignal.timeout(8000),
     });
     if (r.status === 200) res.status(200).json({ domain, registered: true, server });
-    else if (r.status === 404) res.status(200).json({ domain, registered: false, server });
+    else if (r.status === 404) {
+      const reserved = refusal(await r.json().catch(() => null));
+      res.status(200).json(reserved ? { domain, registered: false, reserved, server } : { domain, registered: false, server });
+    }
     else res.status(200).json({ domain, registered: null, server, status: r.status });
   } catch (e) {
     res.status(200).json({ domain, registered: null, server, error: String(e?.name ?? e) });

@@ -12,7 +12,9 @@ beside the first-year one.
   `iana`); the GoDaddy pass takes ten minutes at its rate limit and needs
   `GODADDY_API_KEY` in `../.env`.
 - `api/check.js` — a proxy to the registries' RDAP servers for the ones
-  that refuse browsers.
+  that refuse browsers. `src/refusal.js` reads a registry's reason out of
+  its 404, where it gives one: a name the registry withholds is "reserved",
+  not "available".
 - `build.mjs` — writes `dist/`: the data as `data.json`, the bundled
   script, icons, share card, manifest, robots.txt and sitemap.
 
