@@ -69,6 +69,7 @@ for (const scheme of ["light", "dark"]) {
   await page.waitForFunction(() => document.querySelector(".row .dom")?.textContent === "dmnr.uk");
   await page.waitForFunction(() => document.querySelector(".row").dataset.state === "taken", null, { timeout: 30000 });
   assert.equal(await page.$eval(".row .from", (e) => e.textContent.includes("$")), true, "a taken row still names its price");
+  assert.match(await page.textContent(".row .from"), /Porkbun \$[\d.]+ · Dynadot \$[\d.]+/, "a taken row does not list every registrar that sells the extension");
 
   // A name the registry withholds: not available, and the registry's words shown.
   await page.fill("[data-q]", "coffee.bar");
@@ -130,7 +131,7 @@ for (const scheme of ["light", "dark"]) {
   assert.equal(await page.$eval(".row .offer.best .price", (e) => /^\$\d/.test(e.textContent)), true, "no price offline");
   await page.screenshot({ path: `${shots}/offline-320-light.png` });
   await ctx.setOffline(false);
-  console.log(`ok  offline: cache ${cached}, 676 extensions and prices shown, every row "ask the registrar"`);
+  console.log(`ok  offline: cache ${cached}, the extensions and prices shown, every row "ask the registrar"`);
   await ctx.close();
 }
 await browser.close();

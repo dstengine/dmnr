@@ -23,7 +23,7 @@ if (existsSync(pub)) cpSync(pub, dist(), { recursive: true });
 // and a price for one of those is not a price for a domain. A price of
 // zero is Porkbun's placeholder for an extension it cannot sell yet.
 const json = (f) => JSON.parse(readFileSync(data(f), "utf8"));
-const porkbun = json("porkbun.json"), godaddy = json("godaddy.json"), rdap = json("rdap.json"), extra = json("rdap-extra.json");
+const porkbun = json("porkbun.json"), godaddy = json("godaddy.json"), dynadot = json("dynadot.json"), rdap = json("rdap.json"), extra = json("rdap-extra.json");
 const iana = new Set(json("iana.json").tlds);
 const real = (tld) => iana.has(tld.split(".").pop());
 const sold = (p) => p && p[0] > 0 && p[1] > 0 ? p : null;
@@ -36,19 +36,26 @@ const rdapFor = (tld) => {
   return null;
 };
 const tlds = {};
-for (const [tld, price] of Object.entries(porkbun.tlds)) if (real(tld) && sold(price)) tlds[tld] = { pb: price, gd: null, rdap: rdapFor(tld) };
+for (const [tld, price] of Object.entries(porkbun.tlds)) if (real(tld) && sold(price)) tlds[tld] = { pb: price, gd: null, dd: null, rdap: rdapFor(tld) };
 let gdAsOf = "";
 for (const [tld, v] of Object.entries(godaddy.tlds)) {
   if (!sold(v.price) || !real(tld)) continue;
-  (tlds[tld] ??= { pb: null, gd: null, rdap: rdapFor(tld) }).gd = v.price;
+  (tlds[tld] ??= { pb: null, gd: null, dd: null, rdap: rdapFor(tld) }).gd = v.price;
   if (v.asOf > gdAsOf) gdAsOf = v.asOf;
 }
-const tables = { asOf: { porkbun: porkbun.asOf, godaddy: gdAsOf, rdap: rdap.publication }, tlds };
+for (const [tld, price] of Object.entries(dynadot.tlds)) {
+  if (!sold(price) || !real(tld)) continue;
+  (tlds[tld] ??= { pb: null, gd: null, dd: null, rdap: rdapFor(tld) }).dd = price;
+}
+const tables = { asOf: { porkbun: porkbun.asOf, godaddy: gdAsOf, dynadot: dynadot.asOf, rdap: rdap.publication }, tlds };
 writeFileSync(dist("data.json"), JSON.stringify(tables));
 const count = Object.keys(tlds).length;
 const hundreds = `${Math.floor(count / 100) * 100}+`;
 const day = (iso) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
-const asOf = porkbun.asOf === gdAsOf ? day(porkbun.asOf) : `${day(porkbun.asOf)} (Porkbun) and ${day(gdAsOf)} (GoDaddy)`;
+const dated = { Porkbun: porkbun.asOf, GoDaddy: gdAsOf, Dynadot: dynadot.asOf };
+const asOf = new Set(Object.values(dated)).size === 1
+  ? day(porkbun.asOf)
+  : Object.entries(dated).map(([who, d]) => `${day(d)} (${who})`).join(", ").replace(/, ([^,]*)$/, " and $1");
 
 // The version is the hash of what ships, so an unchanged build keeps its
 // cache and a changed one replaces it.
@@ -85,14 +92,14 @@ const card = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
   <rect width="1200" height="630" fill="${DARK}"/>
   <text x="80" y="250" font-family="Helvetica, Arial, sans-serif" font-size="84" font-weight="800" fill="#E6F0EE">Domain name search</text>
   <text x="80" y="340" font-family="Helvetica, Arial, sans-serif" font-size="40" fill="#2DD4BF">${hundreds} extensions · cheapest first</text>
-  <text x="80" y="420" font-family="Helvetica, Arial, sans-serif" font-size="32" fill="#94A8A4">Porkbun and GoDaddy prices, first year and renewal, checked live</text>
+  <text x="80" y="420" font-family="Helvetica, Arial, sans-serif" font-size="32" fill="#94A8A4">Porkbun, GoDaddy and Dynadot prices, first year and renewal</text>
 </svg>`;
 await sharp(Buffer.from(card)).png().toFile(dist("share.png").pathname);
 
 writeFileSync(dist("manifest.webmanifest"), JSON.stringify({
   name: "dmnr — domain name search",
   short_name: "dmnr",
-  description: `Domain name search across ${hundreds} extensions, cheapest first, with Porkbun's and GoDaddy's prices.`,
+  description: `Domain name search across ${hundreds} extensions, cheapest first, with Porkbun's, GoDaddy's and Dynadot's prices.`,
   start_url: "./",
   scope: "./",
   display: "standalone",

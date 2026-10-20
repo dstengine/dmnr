@@ -2,10 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": { "api/check.js": { "includeFiles": "data/rdap.json" } },
+  "functions": { "api/check.js": { "includeFiles": "data/rdap*.json" } },
   "redirects": [
     { "source": "/go/porkbun/:domain", "destination": "https://porkbun.com/checkout/search?q=:domain", "statusCode": 302 },
-    { "source": "/go/godaddy/:domain", "destination": "https://www.godaddy.com/domainsearch/find?domainToCheck=:domain", "statusCode": 302 }
+    { "source": "/go/godaddy/:domain", "destination": "https://www.godaddy.com/domainsearch/find?domainToCheck=:domain", "statusCode": 302 },
+    { "source": "/go/dynadot/:domain", "destination": "https://www.dynadot.com/domain/search?domain=:domain", "statusCode": 302 }
   ],
   "headers": [
     {

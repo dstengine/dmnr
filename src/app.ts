@@ -45,7 +45,7 @@ const LABELS: Record<Availability, [icon: string, text: string]> = {
   maybe: ["i-check", "likely free"],
   unknown: ["i-help", "ask the registrar"],
 };
-const REGISTRARS = [["pb", "Porkbun", "porkbun"], ["gd", "GoDaddy", "godaddy"]] as const;
+const REGISTRARS = [["pb", "Porkbun", "porkbun"], ["gd", "GoDaddy", "godaddy"], ["dd", "Dynadot", "dynadot"]] as const;
 
 async function load() {
   try {

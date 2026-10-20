@@ -3,7 +3,7 @@
 // the page ships these tables, so a search costs the registrars nothing.
 //
 //   node tools/prices.mjs            everything
-//   node tools/prices.mjs porkbun    one source: porkbun, godaddy, rdap, iana
+//   node tools/prices.mjs porkbun    one source: porkbun, dynadot, godaddy, rdap, iana
 //
 // Porkbun publishes its whole price list in one call with no key. GoDaddy
 // publishes its extensions but not their prices; its bulk availability
@@ -12,6 +12,12 @@
 // the standard first-year and renewal price, which is what the site quotes.
 // Sixty of those a minute, so the GoDaddy pass takes ten minutes and saves
 // as it goes. The key is GODADDY_API_KEY in ~/dst/.env and never printed.
+//
+// Dynadot prints its whole table into its price page, with no key and no
+// account: a Nuxt payload, one array in which every object's values are
+// indexes into the same array. A sale shows as reg_price with the standard
+// price kept in original_reg_price, and the table takes the standard one,
+// which is what the page quotes.
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 
@@ -79,6 +85,50 @@ async function godaddy() {
   console.log(`godaddy: ${priced} extensions priced, ${Object.keys(out.tlds).length - priced} not open`);
 }
 
+async function dynadot() {
+  const res = await fetch("https://www.dynadot.com/domain/prices", { headers: { "user-agent": "Mozilla/5.0 (Macintosh) dmnr.uk prices", accept: "text/html" } });
+  const html = await res.text();
+  const m = html.match(/<script[^>]*id="__NUXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+  if (!m) throw new Error(`dynadot: no price payload in the page (${res.status})`);
+  const flat = JSON.parse(m[1]);
+  const wrapped = new Set(["Ref", "Reactive", "ShallowRef", "ShallowReactive", "EmptyRef", "EmptyShallowRef"]);
+  const seen = new Map();
+  const get = (i) => {
+    if (i < 0) return undefined;
+    if (seen.has(i)) return seen.get(i);
+    const v = flat[i];
+    if (Array.isArray(v)) {
+      if (typeof v[0] === "string" && wrapped.has(v[0])) { const r = get(v[1]); seen.set(i, r); return r; }
+      const a = []; seen.set(i, a);
+      for (const j of v) a.push(get(j));
+      return a;
+    }
+    if (v && typeof v === "object") {
+      const o = {}; seen.set(i, o);
+      for (const [k, j] of Object.entries(v)) o[k] = get(j);
+      return o;
+    }
+    return v;
+  };
+  const rows = [];
+  (function walk(x, depth) {
+    if (!x || typeof x !== "object" || depth > 12) return;
+    if (Array.isArray(x)) {
+      if (x[0] && typeof x[0] === "object" && "reg_price" in x[0]) { rows.push(...x); return; }
+      x.forEach((y) => walk(y, depth + 1));
+    } else Object.values(x).forEach((y) => walk(y, depth + 1));
+  })(get(0), 0);
+  const usd = (s) => { const n = Number(String(s ?? "").replace(/[$,]/g, "")); return n > 0 ? n : null; };
+  const tlds = {};
+  for (const r of rows) {
+    const reg = usd(r.original_reg_price) ?? usd(r.reg_price), ren = usd(r.original_renew_price) ?? usd(r.renew_price);
+    if (reg && ren) tlds[String(r.name).toLowerCase()] = [reg, ren];
+  }
+  if (Object.keys(tlds).length < 500) throw new Error(`dynadot: only ${Object.keys(tlds).length} extensions read — the page has changed`);
+  writeFileSync(data("dynadot.json"), JSON.stringify({ asOf: today, currency: "USD", tlds }, null, 1) + "\n");
+  console.log(`dynadot: ${Object.keys(tlds).length} extensions`);
+}
+
 async function rdap() {
   const json = await (await fetch("https://data.iana.org/rdap/dns.json")).json();
   const tlds = {};
@@ -99,7 +149,7 @@ async function iana() {
   console.log(`iana: ${tlds.length} top-level domains in the root zone`);
 }
 
-const jobs = { porkbun, rdap, iana, godaddy };
+const jobs = { porkbun, dynadot, rdap, iana, godaddy };
 for (const [name, job] of Object.entries(jobs)) {
   if (only && only !== name) continue;
   await job();

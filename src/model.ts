@@ -11,12 +11,14 @@ export interface Extension {
   pb: Price | null;
   /** GoDaddy's standard prices, or null. */
   gd: Price | null;
+  /** Dynadot's prices, or null. */
+  dd: Price | null;
   /** The RDAP server that answers for this extension, or null. */
   rdap: string | null;
 }
 
 export interface Tables {
-  asOf: { porkbun: string; godaddy: string; rdap: string };
+  asOf: { porkbun: string; godaddy: string; dynadot: string; rdap: string };
   tlds: Record<string, Extension>;
 }
 
@@ -87,11 +89,16 @@ export function parse(raw: string, known: Iterable<string>): Query {
 }
 
 /** The cheaper of what is offered, and who offers it. */
-export function best(ext: Extension, by: "registration" | "renewal" = "registration"): { price: number; who: "pb" | "gd" } | null {
+/** The registrars with a column, by the key their prices sit under. */
+export type Registrar = "pb" | "gd" | "dd";
+
+export function best(ext: Extension, by: "registration" | "renewal" = "registration"): { price: number; who: Registrar } | null {
   const i = by === "renewal" ? 1 : 0;
-  const offers: { price: number; who: "pb" | "gd" }[] = [];
-  if (ext.pb) offers.push({ price: ext.pb[i], who: "pb" });
-  if (ext.gd) offers.push({ price: ext.gd[i], who: "gd" });
+  const offers: { price: number; who: Registrar }[] = [];
+  for (const who of ["pb", "gd", "dd"] as const) {
+    const p = ext[who];
+    if (p) offers.push({ price: p[i], who });
+  }
   if (!offers.length) return null;
   return offers.sort((a, b) => a.price - b.price)[0];
 }

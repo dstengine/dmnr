@@ -41,13 +41,16 @@ test("parse: errors say why", () => {
   assert.equal(parse("...", known).name, "");
 });
 
-const ext = (tld, pb, gd) => ({ tld, pb, gd, rdap: null });
+const ext = (tld, pb, gd, dd = null) => ({ tld, pb, gd, dd, rdap: null });
 test("best: the cheaper registrar, by first year or by renewal", () => {
   const e = ext("xyz", [1.11, 11.44], [0.99, 14.99]);
   assert.deepEqual(best(e), { price: 0.99, who: "gd" });
   assert.deepEqual(best(e, "renewal"), { price: 11.44, who: "pb" });
   assert.equal(best(ext("none", null, null)), null);
   assert.deepEqual(best(ext("tie", [5, 5], [5, 5])), { price: 5, who: "pb" });
+  assert.deepEqual(best(ext("three", [5, 5], [4, 9], [3, 3])), { price: 3, who: "dd" });
+  assert.deepEqual(best(ext("three", [5, 5], [4, 9], [3, 30]), "renewal"), { price: 5, who: "pb" });
+  assert.deepEqual(best(ext("only", null, null, [2, 2])), { price: 2, who: "dd" });
 });
 test("order: cheapest first, the pinned extension before everything, unpriced last", () => {
   const rows = [
@@ -170,6 +173,14 @@ test("the service worker precaches what the page loads, stamped with the build's
   // Availability must never come from a cache: the proxy and the registrar links go to the network.
   assert.match(sw, /startsWith\("\/api\/"\)/);
   assert.match(sw, /startsWith\("\/go\/"\)/);
+});
+test("the shipped tables carry three registrars, each dated, no zero prices", () => {
+  const tables = JSON.parse(readFileSync(built("data.json"), "utf8"));
+  for (const who of ["porkbun", "godaddy", "dynadot"]) assert.match(tables.asOf[who], /^\d{4}-\d{2}-\d{2}$/, `${who} is not dated`);
+  const rows = Object.entries(tables.tlds);
+  for (const who of ["pb", "gd", "dd"]) assert.ok(rows.filter(([, e]) => e[who]).length >= 500, `fewer than 500 ${who} prices`);
+  assert.ok(rows.some(([, e]) => e.pb && e.gd && e.dd), "no extension priced by all three");
+  for (const [tld, e] of rows) for (const who of ["pb", "gd", "dd"]) if (e[who]) assert.ok(e[who][0] > 0 && e[who][1] > 0, `${tld} ${who} has a zero price`);
 });
 test("the page registers the worker and says when it is offline", () => {
   const app = readFileSync(built("app.js"), "utf8");
