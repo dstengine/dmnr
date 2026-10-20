@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- The page fetches its own price table, asks Cloudflare's resolver and
+     the registries' RDAP servers whether a name is taken, and nothing else:
+     no analytics, no fonts. Repeated as a header in vercel.json. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
+<title>Domain name search: __COUNT__ extensions, cheapest first</title>
+<meta name="description" content="Domain name search across __COUNT__ extensions, each checked live over DNS and RDAP, with Porkbun's and GoDaddy's price for the first year and for renewal, cheapest first.">
+<link rel="canonical" href="https://dmnr.uk/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Domain name search: __COUNT__ extensions, cheapest first">
+<meta property="og:description" content="Type a name, see which extensions are free and what Porkbun and GoDaddy charge for them, cheapest first.">
+<meta property="og:url" content="https://dmnr.uk/">
+<meta property="og:image" content="https://dmnr.uk/share.png">
+<meta property="og:image:alt" content="Domain name search across hundreds of extensions, cheapest first">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#F2F7F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B1514" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "WebApplication", "name": "Domain name search", "alternateName": "dmnr", "url": "https://dmnr.uk/", "description": "Checks a name against __COUNT__ domain extensions live over DNS and RDAP and lists them cheapest first with Porkbun's and GoDaddy's first-year and renewal prices.", "applicationCategory": "UtilitiesApplication", "operatingSystem": "Any (web browser)", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "license": "https://opensource.org/licenses/MIT", "image": "https://dmnr.uk/share.png"}, {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "How does the search know whether a domain is taken?", "acceptedAnswer": {"@type": "Answer", "text": "Two questions are asked about every name. Cloudflare's DNS resolver is asked for the name's nameservers: a name with nameservers is registered. If it has none, the registry's own RDAP server, the successor to WHOIS, is asked for the registration record: a record means taken, none means available. Where a registry publishes no RDAP server the name is listed as likely free, and the registrar's page gives the final answer."}}, {"@type": "Question", "name": "Where do the prices come from?", "acceptedAnswer": {"@type": "Answer", "text": "Porkbun publishes its whole price list through its API, and GoDaddy's standard price for each extension is read from its availability API. Both tables are refreshed by hand, and the page says when. They are the standard first-year and renewal prices in US dollars: a registrar may ask more for a premium name and less during a sale, and a price in another currency comes from the registrar."}}, {"@type": "Question", "name": "Why is the renewal price shown next to the first-year price?", "acceptedAnswer": {"@type": "Answer", "text": "Because the first year is often the bait. An extension sold for a dollar can renew at thirty, and the renewal price is what the domain costs every year after the first, so the list can be sorted by it too."}}, {"@type": "Question", "name": "Which registrars are compared?", "acceptedAnswer": {"@type": "Answer", "text": "Porkbun and GoDaddy, each with the extensions it sells. A link opens the registrar's own search for the name typed here, where the name is checked once more before it is bought."}}, {"@type": "Question", "name": "Is what I type stored?", "acceptedAnswer": {"@type": "Answer", "text": "The name is sent to Cloudflare's resolver and to the registries' RDAP servers to be checked, as any domain search does, and through this site's own small proxy where a registry refuses browsers. The page keeps no history and runs no analytics."}}]}]}</script>
+<link rel="stylesheet" href="style.css?v=__VERSION__">
+<script type="module" src="app.js?v=__VERSION__"></script>
+</head>
+<body>
+<!-- Icons: one inline sprite, so they cost no request. -->
+<svg class="sprite" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7"/><circle cx="12" cy="17" r="1" class="dot"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 12.5V4.5h8l9 9-8 8z"/><circle cx="8" cy="9" r="1.3" class="dot"/></symbol>
+  <symbol id="i-renew" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5"/></symbol>
+  <symbol id="i-az" viewBox="0 0 24 24"><path d="M3.5 17l3.5-10 3.5 10M4.9 13.5h4.2M14 7h6l-6 10h6"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><path d="M12 5v14M12 19l-5-5M12 19l5-5"/></symbol>
+</svg>
+<header class="bar">
+  <a class="mark" href="./" title="Domain name search">dmnr</a>
+  <a class="bar-link" href="#how" title="How a name is checked and priced"><svg class="ico" aria-hidden="true"><use href="#i-help"/></svg>How it works</a>
+</header>
+
+<main>
+  <h1>Domain name search</h1>
+  <p class="lede">Type a name. Each of <span class="nowrap"><span data-tld-count>__COUNT__</span> extensions</span> is checked live and listed cheapest first, with Porkbun's and GoDaddy's price for the first year and for renewal.</p>
+
+  <form class="search" data-form action="./" method="get" role="search">
+    <label class="visually-hidden" for="q">Domain name</label>
+    <input id="q" name="q" type="search" data-q placeholder="name or name.co.uk" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="url" enterkeyhint="search" maxlength="80">
+    <button type="submit" class="btn primary" title="Check every extension"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></button>
+  </form>
+  <p class="hint" data-hint hidden></p>
+  <p class="examples">Try <button type="button" class="chip" data-example="coffee">coffee</button> <button type="button" class="chip" data-example="my-shop.co.uk">my-shop.co.uk</button> <button type="button" class="chip" data-example="studio42">studio42</button></p>
+
+  <div class="tools" data-tools hidden>
+    <div class="seg" role="group" aria-label="Order">
+      <button type="button" data-sort="cheapest" aria-pressed="true" title="Cheapest first year first"><svg class="ico" aria-hidden="true"><use href="#i-tag"/></svg><span>Cheapest</span></button>
+      <button type="button" data-sort="renewal" aria-pressed="false" title="Cheapest renewal first"><svg class="ico" aria-hidden="true"><use href="#i-renew"/></svg><span>Renewal</span></button>
+      <button type="button" data-sort="alpha" aria-pressed="false" title="Extensions A to Z"><svg class="ico" aria-hidden="true"><use href="#i-az"/></svg><span>A–Z</span></button>
+    </div>
+    <button type="button" class="btn toggle" data-only-free aria-pressed="false" title="Hide the names that are taken"><svg class="ico" aria-hidden="true"><use href="#i-filter"/></svg><span>Available only</span></button>
+  </div>
+  <p class="status" data-status aria-live="polite" hidden></p>
+  <ol class="rows" data-rows></ol>
+  <p class="more-row"><button type="button" class="btn wide" data-more hidden><svg class="ico" aria-hidden="true"><use href="#i-more"/></svg><span>Check 60 more</span></button></p>
+
+  <section class="about" id="how">
+    <h2>How it works</h2>
+    <p>Every extension in the tables gets a row, ordered by the cheaper of Porkbun's and GoDaddy's first-year price. The rows are checked a few at a time, the first sixty straight away and sixty more on request, so a long list costs nothing until it is wanted.</p>
+    <p>A name is <strong>taken</strong> when Cloudflare's resolver finds nameservers for it or the registry's RDAP server has a record of it, and <strong>available</strong> when the registry says it has none. <strong>Likely free</strong> means no nameservers and a registry that publishes no RDAP server; <strong>ask the registrar</strong> means the registry did not answer in time. The registrar's own search, one tap away, settles both.</p>
+    <p>A domain typed with its extension, such as <code>my-shop.co.uk</code>, puts that extension at the top and checks the rest of the name across every other.</p>
+  </section>
+
+  <section class="about faq">
+    <h2>Questions</h2>
+    <details><summary>How does the search know whether a domain is taken?</summary><p>Two questions are asked about every name. Cloudflare's DNS resolver is asked for the name's nameservers: a name with nameservers is registered. If it has none, the registry's own RDAP server, the successor to WHOIS, is asked for the registration record: a record means taken, none means available. Where a registry publishes no RDAP server the name is listed as likely free, and the registrar's page gives the final answer.</p></details>
+    <details><summary>Where do the prices come from?</summary><p>Porkbun publishes its whole price list through its API, and GoDaddy's standard price for each extension is read from its availability API. Both tables are refreshed by hand, and the page says when. They are the standard first-year and renewal prices in US dollars: a registrar may ask more for a premium name and less during a sale, and a price in another currency comes from the registrar.</p></details>
+    <details><summary>Why is the renewal price shown next to the first-year price?</summary><p>Because the first year is often the bait. An extension sold for a dollar can renew at thirty, and the renewal price is what the domain costs every year after the first, so the list can be sorted by it too.</p></details>
+    <details><summary>Which registrars are compared?</summary><p>Porkbun and GoDaddy, each with the extensions it sells. A link opens the registrar's own search for the name typed here, where the name is checked once more before it is bought.</p></details>
+    <details><summary>Is what I type stored?</summary><p>The name is sent to Cloudflare's resolver and to the registries' RDAP servers to be checked, as any domain search does, and through this site's own small proxy where a registry refuses browsers. The page keeps no history and runs no analytics.</p></details>
+  </section>
+
+  <footer class="foot">
+    <p>Prices as of __ASOF__, from Porkbun's and GoDaddy's public lists: standard rates in US dollars, before sales and premium pricing. Availability is checked live.</p>
+    <p>dmnr.uk · MIT licence</p>
+  </footer>
+</main>
+<noscript><p class="hint">The search runs in your browser and needs JavaScript. The prices and extensions are in <a href="data.json">data.json</a>.</p></noscript>
+</body>
+</html>
