@@ -17,7 +17,9 @@ beside the first-year one.
   its 404, where it gives one: a name the registry withholds is "reserved",
   not "available".
 - `build.mjs` — writes `dist/`: the data as `data.json`, the bundled
-  script, icons, share card, manifest, robots.txt and sitemap.
+  script, the service worker (`src/sw.js`, which keeps the page openable
+  offline and caches no availability answer), icons, share card, manifest,
+  robots.txt and sitemap.
 
 ```
 npm install

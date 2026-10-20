@@ -279,10 +279,18 @@ function updateStatus() {
   const done = win.filter((r) => r.state !== "idle" && r.state !== "checking").length;
   const free = win.filter((r) => r.state === "available" || r.state === "maybe").length;
   const nw = (s: string) => `<span class="nowrap">${s}</span>`;
+  // Without a connection the prices still show; the checks cannot run, so
+  // the line must not say they did.
+  if (navigator.onLine === false) {
+    status.innerHTML = `Offline: prices only, the checks need a connection · ${nw(`${win.length} of ${ordered.length}`)} extensions shown`;
+    return;
+  }
   status.innerHTML = done < win.length
     ? `Checking ${nw(`${done} of ${win.length}`)} · ${nw(`${free} available`)} so far`
     : `${nw(`${win.length} of ${ordered.length}`)} extensions checked · ${nw(`${free} available`)}`;
 }
+addEventListener("online", () => rows.length && updateStatus());
+addEventListener("offline", () => rows.length && updateStatus());
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -323,3 +331,11 @@ for (const b of document.querySelectorAll<HTMLButtonElement>("[data-example]")) 
   });
 }
 load();
+
+// The service worker keeps the page openable offline (see src/sw.js). It is
+// registered after load so it never competes with the page's own requests.
+if ("serviceWorker" in navigator) {
+  addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}

@@ -1,6 +1,6 @@
-// Builds dist/: the page, one bundled script, the stylesheet, the price
-// tables as data.json, icons, a share card, a manifest, robots.txt and the
-// sitemap. Asset URLs are relative; canonical URLs name dmnr.uk.
+// Builds dist/: the page, one bundled script, the stylesheet, the service
+// worker, the price tables as data.json, icons, a share card, a manifest,
+// robots.txt and the sitemap. Asset URLs are relative; canonical URLs name dmnr.uk.
 import { build } from "esbuild";
 import sharp from "sharp";
 import { createHash } from "node:crypto";
@@ -53,7 +53,7 @@ const asOf = porkbun.asOf === gdAsOf ? day(porkbun.asOf) : `${day(porkbun.asOf)}
 // The version is the hash of what ships, so an unchanged build keeps its
 // cache and a changed one replaces it.
 const hash = createHash("sha256");
-for (const f of ["app.ts", "model.ts", "refusal.js", "style.css", "index.html", "icon.svg"]) hash.update(readFileSync(src(f)));
+for (const f of ["app.ts", "model.ts", "refusal.js", "style.css", "index.html", "icon.svg", "sw.js"]) hash.update(readFileSync(src(f)));
 hash.update(readFileSync(dist("data.json")));
 const version = hash.digest("hex").slice(0, 10);
 
@@ -70,6 +70,7 @@ await build({
   logLevel: "warning",
 });
 cpSync(src("style.css"), dist("style.css"));
+writeFileSync(dist("sw.js"), readFileSync(src("sw.js"), "utf8").replaceAll("__VERSION__", version));
 cpSync(src("icon.svg"), dist("icon.svg"));
 
 const svg = readFileSync(src("icon.svg"));

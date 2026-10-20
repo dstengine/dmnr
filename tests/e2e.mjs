@@ -2,7 +2,9 @@
 // finds available extensions cheapest first, a typed extension is pinned,
 // our own dmnr.uk is taken, the filter and the sort work, a bad name is
 // explained, nothing overflows, and the page talks only to the resolver,
-// the registries and itself. Needs the network: the checks are real.
+// the registries and itself. Then, offline: the service worker opens the
+// page with its prices and says the checks need a connection. Needs the
+// network: the checks are real.
 // Run: npm run build && npm run e2e
 import { chromium, devices } from "playwright";
 import assert from "node:assert/strict";
@@ -100,6 +102,35 @@ for (const scheme of ["light", "dark"]) {
   assert.deepEqual(others, [], "requests outside the resolver, the registries and the page");
   assert.deepEqual(errors, [], "console errors");
   console.log(`ok  ${scheme}: ${count} extensions; ${fresh}: ${JSON.stringify(tally)}; pinned, filter, sort, hints, no overflow, no outside requests`);
+  await ctx.close();
+}
+// Offline: once the worker has installed, the page opens from its cache with
+// the extension list and prices, and says the checks cannot run.
+{
+  const ctx = await browser.newContext({ ...devices["iPhone SE"], viewport: { width: 320, height: 640 } });
+  const page = await ctx.newPage();
+  await page.goto(BASE);
+  await page.waitForFunction(() => /^\d+$/.test(document.querySelector("[data-tld-count]").textContent));
+  await page.waitForFunction(async () => {
+    const reg = await navigator.serviceWorker.ready;
+    const keys = await caches.keys();
+    return !!reg.active && keys.some((k) => k.startsWith("dmnr-")) && !!navigator.serviceWorker.controller;
+  }, null, { timeout: 30000 });
+  const cached = await page.evaluate(async () => (await caches.keys()).find((k) => k.startsWith("dmnr-")));
+  await ctx.setOffline(true);
+  await page.goto(`${BASE}?q=coffee`);
+  await page.waitForFunction(() => /^\d+$/.test(document.querySelector("[data-tld-count]").textContent));
+  assert.ok(Number(await page.textContent("[data-tld-count]")) >= 600, "the offline page lost its extensions");
+  await page.waitForFunction(() => document.querySelectorAll(".row").length === 60);
+  await page.waitForFunction(() => /^Offline: .*extensions shown$/.test(document.querySelector("[data-status]").textContent), null, { timeout: 30000 });
+  await page.waitForFunction(() => [...document.querySelectorAll(".row")].every((r) => !/idle|checking/.test(r.dataset.state)), null, { timeout: 60000 });
+  assert.doesNotMatch(await page.textContent("[data-status]"), /checked|available/, "the offline status claims a check ran");
+  const offline = await page.$$eval(".row", (rows) => rows.map((r) => r.dataset.state));
+  assert.ok(offline.every((s) => s === "unknown"), `offline rows claim a verdict: ${JSON.stringify([...new Set(offline)])}`);
+  assert.equal(await page.$eval(".row .offer.best .price", (e) => /^\$\d/.test(e.textContent)), true, "no price offline");
+  await page.screenshot({ path: `${shots}/offline-320-light.png` });
+  await ctx.setOffline(false);
+  console.log(`ok  offline: cache ${cached}, 676 extensions and prices shown, every row "ask the registrar"`);
   await ctx.close();
 }
 await browser.close();

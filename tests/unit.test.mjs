@@ -1,8 +1,10 @@
 // The parts with no browser in them: what typed text means, how rows are
-// ordered, how prices print, where an extension's RDAP server is, and what
-// the api/check handler refuses. Run: npm test
+// ordered, how prices print, where an extension's RDAP server is, what the
+// api/check handler refuses, and what the service worker precaches. Run:
+// npm run build && npm test
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
 import { best, icannReserved, judge, money, order, parse, rdapFor, shortLabelHint } from "../src/model.ts";
 import { answer404, refusal } from "../src/refusal.js";
 import check from "../api/check.js";
@@ -153,4 +155,28 @@ test("api/check answers null where no registry publishes RDAP", async () => {
   assert.equal(out.code, 200);
   assert.deepEqual(out.body, { domain: "example.no-such-tld-zz", registered: null, server: null });
   assert.match(out.headers["Cache-Control"], /s-maxage=600/);
+});
+
+// ---- the service worker agrees with the page it caches (needs dist/)
+const built = (f) => new URL(`../dist/${f}`, import.meta.url);
+test("the service worker precaches what the page loads, stamped with the build's version", () => {
+  const sw = readFileSync(built("sw.js"), "utf8");
+  const html = readFileSync(built("index.html"), "utf8");
+  const version = html.match(/app\.js\?v=([0-9a-f]{10})/)?.[1];
+  assert.ok(version, "the page does not name a version");
+  assert.ok(!sw.includes("__VERSION__") && sw.includes(`"dmnr-${version}"`), "the worker is not stamped with the page's version");
+  for (const f of [`app.js?v=${version}`, `style.css?v=${version}`, `data.json?v=${version}`, '"./"', '"icon.svg"', '"manifest.webmanifest"']) assert.ok(sw.includes(f), `${f} is not precached`);
+  for (const f of ["app.js", "style.css", "data.json", "icon.svg", "manifest.webmanifest"]) assert.ok(existsSync(built(f)), `${f} is not in dist/`);
+  // Availability must never come from a cache: the proxy and the registrar links go to the network.
+  assert.match(sw, /startsWith\("\/api\/"\)/);
+  assert.match(sw, /startsWith\("\/go\/"\)/);
+});
+test("the page registers the worker and says when it is offline", () => {
+  const app = readFileSync(built("app.js"), "utf8");
+  assert.match(app, /serviceWorker\.register\("sw\.js"\)/);
+  assert.match(app, /Offline: prices only/);
+  const manifest = JSON.parse(readFileSync(built("manifest.webmanifest"), "utf8"));
+  assert.equal(manifest.display, "standalone");
+  assert.ok(manifest.icons.some((i) => i.sizes === "512x512" && i.purpose === "maskable"), "no maskable icon");
+  assert.ok(manifest.icons.some((i) => i.sizes === "192x192"), "no 192px icon");
 });
