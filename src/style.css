@@ -142,6 +142,7 @@ main { max-width: 640px; margin: 0 auto; padding: 0 16px; }
 .about p { margin: 0 0 .75rem; color: var(--muted); }
 .about strong { color: var(--ink); }
 .about a, .foot a, .hint a { color: var(--accent); text-underline-offset: 2px; }
+.with-ico { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; }
 .faq details { border-top: 1px solid var(--line); }
 .faq details:last-of-type { border-bottom: 1px solid var(--line); }
 .faq summary { padding: 12px 0; font-weight: 600; cursor: pointer; min-height: 44px; display: flex; align-items: center; }

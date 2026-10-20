@@ -24,8 +24,10 @@ npm run e2e       # Chromium at 320px, light and dark; needs the network
 npm run serve     # http://localhost:4174/ with api/check mounted
 ```
 
-Deploys to Vercel from this directory: `vercel deploy --prod`. The `/go/`
-links are redirects to the registrars' own search pages and are kept out
-of robots.txt.
+Deploys go through git push: the Vercel project `dmnr` is linked to
+[github.com/dstengine/dmnr](https://github.com/dstengine/dmnr), and every
+push to `main` builds and deploys. `vercel deploy --prod` from this
+directory still works for a one-off. The `/go/` links are redirects to the
+registrars' own search pages and are kept out of robots.txt.
 
 MIT licence.
