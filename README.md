@@ -3,16 +3,20 @@
 Domain name search: type a name, see which extensions are free and what
 Porkbun, GoDaddy and Dynadot charge for them, cheapest first, with the
 renewal price beside the first-year one. Every extension is checked at
-several sources, and a row is as sure as its sources agree.
+several sources, and a row is as sure as its sources agree. The list can be
+kept to one country's extensions, and every country-code row names its country.
 
 - `src/` — the page, its styles, and the search (`app.ts`), with the parts
   that need no browser in `model.ts`.
 - `data/` — the tables the page ships: Porkbun's, GoDaddy's and Dynadot's prices,
-  the IANA RDAP bootstrap, the root-zone list, and `rdap-extra.json`, the RDAP
-  servers the bootstrap lacks (io, me, de, ch, us…), each checked by hand. `node tools/prices.mjs`
-  refreshes them (one source as an argument: `porkbun`, `dynadot`,
+  the IANA RDAP bootstrap, the root-zone list, `rdap-extra.json`, the RDAP
+  servers the bootstrap lacks (io, me, de, ch, us…), each checked by hand, and
+  `countries.json`, the country of every country-code extension. `node tools/prices.mjs`
+  refreshes the prices and the lists (one source as an argument: `porkbun`, `dynadot`,
   `godaddy`, `rdap`, `iana`); the GoDaddy pass takes ten minutes at its rate limit and needs
-  `GODADDY_API_KEY` in `../.env`.
+  `GODADDY_API_KEY` in `../.env`. `node tools/countries.mjs` rewrites the country
+  table from the root-zone list: ISO codes named by CLDR, the internationalised
+  country-code extensions by hand.
 - `api/check.js` — a proxy to the registries' RDAP servers for the ones
   that refuse browsers. `src/refusal.js` reads a registry's reason out of
   its 404, where it gives one: a name the registry withholds is "reserved",

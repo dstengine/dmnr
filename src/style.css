@@ -100,6 +100,14 @@ main { max-width: 640px; margin: 0 auto; padding: 0 16px; }
 .seg button { display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; min-height: 44px; padding: 0 12px; border-radius: 999px; font-weight: 600; font-size: .85rem; color: var(--muted); white-space: nowrap; }
 .seg button[aria-pressed="true"] { background: var(--tint); color: var(--accent); }
 .tools .toggle { min-height: 44px; font-size: .85rem; }
+/* The country menu looks like the toggles beside it; the arrow is the browser's. */
+.select { display: inline-flex; max-width: 100%; }
+.select select {
+  min-height: 44px; max-width: 100%; padding: 0 12px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  font: inherit; font-weight: 600; font-size: .85rem;
+}
+.select select[data-on] { background: var(--tint); color: var(--accent); border-color: var(--accent); }
 /* At phone width the three names and the toggle do not fit with icons. */
 @media (max-width: 479px) {
   .seg .ico { display: none; }
@@ -114,6 +122,7 @@ main { max-width: 640px; margin: 0 auto; padding: 0 16px; }
 .row-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; min-height: 28px; }
 .dom { font-weight: 700; font-size: 1.05rem; overflow-wrap: anywhere; }
 .dom b { color: var(--accent); font-weight: 700; white-space: nowrap; }
+.where { margin: 2px 0 0; color: var(--muted); font-size: .8rem; }
 .state { display: inline-flex; align-items: center; gap: 4px; flex: none; margin-left: auto; font-size: .78rem; font-weight: 600; white-space: nowrap; padding: 3px 9px; border-radius: 999px; background: var(--tint); color: var(--muted); }
 .row[data-state="available"] .state, .row[data-state="maybe"] .state { background: var(--ok-tint); color: var(--ok); }
 .row[data-state="taken"] .state, .row[data-state="reserved"] .state { background: var(--line); color: var(--ink); }

@@ -5,7 +5,7 @@
 // registrars' own APIs through api/avail. Each source casts a vote; the
 // verdict and how sure it is come from model.ts, which holds the parts
 // with no DOM in them.
-import { best, explain, icannReserved, lengthBucket, money, order, parse, rdapVote, shortLabelHint, verdict, type Availability, type RdapAnswer, type Row, type Sort, type Tables, type Vote } from "./model";
+import { best, countryOptions, explain, icannReserved, inCountry, lengthBucket, money, order, parse, rdapVote, shortLabelHint, verdict, type Availability, type RdapAnswer, type Row, type Sort, type Tables, type Vote } from "./model";
 import { answer404 } from "./refusal.js";
 
 declare const __VERSION__: string;
@@ -34,6 +34,7 @@ const more = $<HTMLButtonElement>("[data-more]");
 const moreLabel = more.querySelector("span")!;
 const onlyFree = $<HTMLButtonElement>("[data-only-free]");
 const unverified = $<HTMLButtonElement>("[data-unverified]");
+const country = $<HTMLSelectElement>("[data-country]");
 
 let tables: Tables | null = null;
 let known: string[] = [];
@@ -43,6 +44,8 @@ const els = new WeakMap<Row, HTMLLIElement>();
 let sort: Sort = "cheapest";
 let pinned: string | null = null;
 let name = "";
+/** The country whose extensions are shown, ISO code, or "" for all. */
+let cc = "";
 let shown = 0;
 let controller: AbortController | null = null;
 /** One search: its abort signal, the browser workers busy, and the rows
@@ -78,7 +81,15 @@ async function load() {
   for (const [tld, ext] of Object.entries(tables.tlds)) ext.tld = tld;
   known = Object.keys(tables.tlds);
   $("[data-tld-count]").textContent = String(known.length);
-  const q = new URLSearchParams(location.search).get("q");
+  for (const [code, label] of countryOptions(tables.countries)) country.append(new Option(label, code));
+  const params = new URLSearchParams(location.search);
+  const wanted = params.get("cc") ?? "";
+  if (wanted && tables.countries[wanted]) {
+    cc = wanted;
+    country.value = cc;
+    country.toggleAttribute("data-on", true);
+  }
+  const q = params.get("q");
   if (q) {
     input.value = q;
     search();
@@ -104,14 +115,14 @@ function search() {
   if (q.name === name && q.pinned === pinned) return;
   name = q.name;
   pinned = q.pinned;
-  history.replaceState(null, "", `?q=${encodeURIComponent(raw.trim())}`);
+  setUrl(raw.trim());
   controller?.abort();
   if (run) clearTimeout(run.timer);
   controller = new AbortController();
   run = { signal: controller.signal, active: 0, queue: [], timer: 0, inflight: 0 };
   rows = known.map((tld) => ({ domain: `${name}.${tld}`, ext: tables!.tlds[tld], state: "idle" as Availability, votes: {} }));
   ordered = order(rows, sort, pinned);
-  shown = Math.min(PAGE, ordered.length);
+  shown = Math.min(PAGE, view().length);
   tools.hidden = false;
   status.hidden = false;
   render();
@@ -133,12 +144,25 @@ function clear() {
   more.hidden = true;
   tools.hidden = true;
   status.hidden = true;
-  history.replaceState(null, "", location.pathname);
+  setUrl("");
 }
 
+/** The address carries the search, so a result can be sent as a link. */
+function setUrl(q: string) {
+  const p = new URLSearchParams();
+  if (q) p.set("q", q);
+  if (cc) p.set("cc", cc);
+  const s = p.toString();
+  history.replaceState(null, "", s ? `?${s}` : location.pathname);
+}
+
+/** The rows on view: every one, or one country's. The checks run over all. */
+const view = () => inCountry(ordered, cc);
+
 function render() {
-  list.replaceChildren(...ordered.slice(0, shown).map(rowEl));
-  const left = ordered.length - shown;
+  const v = view();
+  list.replaceChildren(...v.slice(0, shown).map(rowEl));
+  const left = v.length - shown;
   more.hidden = left <= 0;
   moreLabel.textContent = `Show ${Math.min(PAGE, left)} more`;
 }
@@ -161,6 +185,14 @@ function rowEl(row: Row): HTMLLIElement {
   tld.textContent = `.${row.ext.tld}`;
   dom.append(name, tld);
   head.append(dom, el("span", "state"));
+  // A country-code extension names its country under the name: .io and
+  // .ai are countries too, and a buyer may want to know whose.
+  let where: HTMLElement | null = null;
+  if (row.ext.cc && tables?.countries[row.ext.cc]) {
+    where = el("p", "where");
+    where.textContent = tables.countries[row.ext.cc];
+    where.title = `.${row.ext.tld.split(".").pop()} is the country code of ${tables.countries[row.ext.cc]}`;
+  }
   const offers = el("div", "offers");
   const cheapest = best(row.ext);
   const from: string[] = [];
@@ -179,7 +211,7 @@ function rowEl(row: Row): HTMLLIElement {
   }
   const was = el("p", "from");
   was.innerHTML = from.join(" · ");
-  li.append(head, offers, was, el("p", "note"));
+  li.append(head, ...(where ? [where] : []), offers, was, el("p", "note"));
   els.set(row, li);
   updateRow(row);
   return li;
@@ -205,7 +237,9 @@ function pump() {
   const r = run;
   if (!r) return;
   while (r.active < WORKERS) {
-    const next = ordered.find((x) => x.state === "idle");
+    // The rows on view go first, so a country's few rows are not kept
+    // waiting behind the hundreds that are cheaper and hidden.
+    const next = view().find((x) => x.state === "idle") ?? ordered.find((x) => x.state === "idle");
     if (!next) break;
     next.state = "checking";
     updateRow(next);
@@ -372,13 +406,14 @@ function updateStatus() {
   const nw = (s: string) => `<span class="nowrap">${s}</span>`;
   // Without a connection the prices still show; the checks cannot run, so
   // the line must not say they did.
+  const where = cc && tables ? ` · ${nw(`${view().length} in ${tables.countries[cc]}`)}` : "";
   if (navigator.onLine === false) {
-    status.innerHTML = `Offline: prices only, the checks need a connection · ${nw(`${Math.min(shown, ordered.length)} of ${ordered.length}`)} extensions shown`;
+    status.innerHTML = `Offline: prices only, the checks need a connection · ${nw(`${Math.min(shown, view().length)} of ${view().length}`)} extensions shown`;
     return;
   }
-  status.innerHTML = done < ordered.length
+  status.innerHTML = (done < ordered.length
     ? `Checking ${nw(`${done} of ${ordered.length}`)} · ${nw(`${free} available`)} so far`
-    : `${nw(`${ordered.length} extensions checked`)} · ${nw(`${free} available`)}`;
+    : `${nw(`${ordered.length} extensions checked`)} · ${nw(`${free} available`)}`) + where;
 }
 addEventListener("online", () => rows.length && updateStatus());
 addEventListener("offline", () => rows.length && updateStatus());
@@ -412,6 +447,16 @@ const toggle = (b: HTMLButtonElement, attr: string) => {
 };
 toggle(onlyFree, "data-only-free");
 toggle(unverified, "data-unverified");
+country.addEventListener("change", () => {
+  cc = tables?.countries[country.value] ? country.value : "";
+  country.toggleAttribute("data-on", cc !== "");
+  if (!rows.length) return;
+  shown = Math.min(PAGE, view().length);
+  render();
+  pump();
+  updateStatus();
+  setUrl(input.value.trim());
+});
 for (const b of document.querySelectorAll<HTMLButtonElement>("[data-len]")) {
   b.addEventListener("click", () => {
     for (const x of document.querySelectorAll("[data-len]")) x.setAttribute("aria-pressed", String(x === b));
@@ -421,7 +466,7 @@ for (const b of document.querySelectorAll<HTMLButtonElement>("[data-len]")) {
   });
 }
 more.addEventListener("click", () => {
-  shown = Math.min(shown + PAGE, ordered.length);
+  shown = Math.min(shown + PAGE, view().length);
   render();
   updateStatus();
 });

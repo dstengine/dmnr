@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { best, explain, icannReserved, lengthBucket, money, order, parse, rdapFor, rdapVote, shortLabelHint, verdict } from "../src/model.ts";
+import { best, countryOptions, explain, icannReserved, inCountry, lengthBucket, money, order, parse, rdapFor, rdapVote, shortLabelHint, verdict } from "../src/model.ts";
 import { answer404, refusal } from "../src/refusal.js";
 import { askAll, enabled, parseDynadot, parseGandi, parseGodaddy, parseNamecom, parseNamesilo, parsePorkbun, parseSpaceship } from "../src/providers.js";
 import check from "../api/check.js";
@@ -137,6 +137,26 @@ test("parseNamecom: purchasable with premium, a reason that says the extension i
     { domainName: "b.com", purchasable: false, reason: "already registered" }, { domainName: "c.zz", purchasable: false, reason: "TLD not supported" },
   ] }, ["a.com", "p.com", "b.com", "c.zz", "d.com"]);
   assert.deepEqual(got, { "a.com": "free", "p.com": "premium", "b.com": "taken", "c.zz": "na", "d.com": "silent" });
+});
+test("inCountry keeps one country's rows, every row without one", () => {
+  const rows = [{ ext: { tld: "uk", cc: "GB" } }, { ext: { tld: "co.uk", cc: "GB" } }, { ext: { tld: "de", cc: "DE" } }, { ext: { tld: "com" } }];
+  assert.deepEqual(inCountry(rows, "GB").map((r) => r.ext.tld), ["uk", "co.uk"]);
+  assert.deepEqual(inCountry(rows, "").length, 4);
+  assert.deepEqual(inCountry(rows, "ZZ"), []);
+});
+test("countryOptions are in name order", () => {
+  assert.deepEqual(countryOptions({ GB: "United Kingdom", DE: "Germany", AI: "Anguilla" }), [["AI", "Anguilla"], ["DE", "Germany"], ["GB", "United Kingdom"]]);
+});
+test("data/countries.json: every two-letter root zone has a country, .uk is GB, the IDN zones are by hand", async () => {
+  const { readFileSync } = await import("node:fs");
+  const c = JSON.parse(readFileSync(new URL("../data/countries.json", import.meta.url), "utf8"));
+  const iana = JSON.parse(readFileSync(new URL("../data/iana.json", import.meta.url), "utf8"));
+  for (const tld of iana.tlds) if (tld.length === 2) assert.ok(c.names[c.zones[tld]], `no country for .${tld}`);
+  assert.equal(c.zones.uk, "GB");
+  assert.equal(c.names.GB, "United Kingdom");
+  assert.equal(c.zones["xn--fiqs8s"], "CN");
+  assert.equal(c.zones["xn--j6w193g"], "HK");
+  assert.equal(c.zones.com, undefined);
 });
 test("parseSpaceship reads the answer loosely", () => {
   assert.deepEqual(parseSpaceship({ items: [{ domain: "a.com", available: true }, { domain: "b.com", available: false }, { name: "c.com", status: "available", isPremium: true }] }, ["a.com", "b.com", "c.com", "d.com"]),

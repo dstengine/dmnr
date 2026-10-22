@@ -24,6 +24,7 @@ if (existsSync(pub)) cpSync(pub, dist(), { recursive: true });
 // zero is Porkbun's placeholder for an extension it cannot sell yet.
 const json = (f) => JSON.parse(readFileSync(data(f), "utf8"));
 const porkbun = json("porkbun.json"), godaddy = json("godaddy.json"), dynadot = json("dynadot.json"), rdap = json("rdap.json"), extra = json("rdap-extra.json");
+const countries = json("countries.json");
 const iana = new Set(json("iana.json").tlds);
 const real = (tld) => iana.has(tld.split(".").pop());
 const sold = (p) => p && p[0] > 0 && p[1] > 0 ? p : null;
@@ -47,7 +48,16 @@ for (const [tld, price] of Object.entries(dynadot.tlds)) {
   if (!sold(price) || !real(tld)) continue;
   (tlds[tld] ??= { pb: null, gd: null, dd: null, rdap: rdapFor(tld) }).dd = price;
 }
-const tables = { asOf: { porkbun: porkbun.asOf, godaddy: gdAsOf, dynadot: dynadot.asOf, rdap: rdap.publication }, tlds };
+// A country-code extension, and every second-level zone under one, carries
+// its country; the page's country filter and its row labels read it here.
+const named = {};
+for (const [tld, ext] of Object.entries(tlds)) {
+  const cc = countries.zones[tld.split(".").pop()];
+  if (!cc) continue;
+  ext.cc = cc;
+  named[cc] = countries.names[cc];
+}
+const tables = { asOf: { porkbun: porkbun.asOf, godaddy: gdAsOf, dynadot: dynadot.asOf, rdap: rdap.publication }, countries: named, tlds };
 writeFileSync(dist("data.json"), JSON.stringify(tables));
 const count = Object.keys(tlds).length;
 const hundreds = `${Math.floor(count / 100) * 100}+`;

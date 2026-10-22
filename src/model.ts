@@ -15,10 +15,14 @@ export interface Extension {
   dd: Price | null;
   /** The RDAP server that answers for this extension, or null. */
   rdap: string | null;
+  /** The country a country-code extension belongs to, ISO 3166-1 alpha-2. */
+  cc?: string;
 }
 
 export interface Tables {
   asOf: { porkbun: string; godaddy: string; dynadot: string; rdap: string };
+  /** The English name of every country the tables have an extension for. */
+  countries: Record<string, string>;
   tlds: Record<string, Extension>;
 }
 
@@ -218,6 +222,16 @@ export function rdapVote(a: RdapAnswer | "none"): Vote {
 
 /** The length bucket of an extension, for the filter: the letters in it,
     dots aside, so co.uk is 4 and com is 3. */
+/** The rows of one country, or all of them when no country is chosen. */
+export function inCountry(rows: Row[], cc: string): Row[] {
+  return cc ? rows.filter((r) => r.ext.cc === cc) : rows;
+}
+
+/** The countries the tables cover, as [code, name] in name order. */
+export function countryOptions(countries: Record<string, string>): [code: string, name: string][] {
+  return Object.entries(countries).sort(([, a], [, b]) => a.localeCompare(b));
+}
+
 export function lengthBucket(tld: string): "2" | "3" | "4" {
   const n = tld.replace(/\./g, "").length;
   return n <= 2 ? "2" : n === 3 ? "3" : "4";

@@ -47,7 +47,9 @@ for (const scheme of ["light", "dark"]) {
   await page.waitForFunction(() => [...document.querySelectorAll(".row")].every((r) => !/idle|checking/.test(r.dataset.state)), null, { timeout: 180000 });
   const states = await page.$$eval(".row", (rows) => rows.map((r) => r.dataset.state));
   const tally = Object.fromEntries(["available", "taken", "reserved", "maybe", "unknown"].map((s) => [s, states.filter((x) => x === s).length]));
-  assert.ok(tally.available >= 1, `no available row for ${fresh}: ${JSON.stringify(tally)}`);
+  // A registrar that has throttled the night's runs answers nothing, and an
+  // unconfirmed free is "likely free": a positive answer either way.
+  assert.ok(tally.available + tally.maybe >= 1, `no available row for ${fresh}: ${JSON.stringify(tally)}`);
   assert.ok(tally.taken <= 3, `a fresh name is taken in ${tally.taken} extensions`);
   // Half, not all: the rdap.nic.* registries limit queries per IP and a few
   // runs in a row from one machine use that up — the page then says
@@ -73,6 +75,19 @@ for (const scheme of ["light", "dark"]) {
   await page.click("[data-unverified]");
   assert.ok(await page.$$eval(".row", (rows) => rows.filter((r) => getComputedStyle(r).display !== "none").every((r) => /maybe|unknown/.test(r.dataset.state))), "unverified shows a settled row");
   await page.click("[data-unverified]");
+
+  // One country: the United Kingdom is .uk and the zones under it, the
+  // rows name the country, and the address carries the choice.
+  await page.selectOption("[data-country]", "GB");
+  await page.waitForFunction(() => document.querySelectorAll(".row").length > 0 && document.querySelectorAll(".row").length < 20);
+  const ukRows = await page.$$eval(".row", (rows) => rows.map((r) => r.querySelector(".dom b").textContent));
+  assert.ok(ukRows.length >= 3 && ukRows.every((t) => /\.uk$/.test(t)), `the country filter shows ${ukRows.join(" ")}`);
+  assert.equal(await page.$eval(".row .where", (e) => e.textContent), "United Kingdom", "the row does not name its country");
+  assert.match(await page.evaluate(() => location.search), /cc=GB/, "the address does not carry the country");
+  assert.match(await page.$eval("[data-status]", (e) => e.textContent), /in United Kingdom/, "the status does not count the country's rows");
+  assert.equal(await page.$eval("[data-more]", (e) => e.hidden), true, "more rows offered than the country has");
+  await page.selectOption("[data-country]", "");
+  await page.waitForFunction(() => document.querySelectorAll(".row").length === 60);
 
   // Our own name, with its extension: pinned first, and taken.
   await page.fill("[data-q]", "dmnr.uk");
