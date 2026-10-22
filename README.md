@@ -20,6 +20,10 @@ several sources, and a row is as sure as its sources agree.
 - `api/avail.js` — the registrars' own availability APIs, asked for a
   batch of names with the keys the deployment holds; `src/providers.js`
   has one adapter per registrar and the parsers the tests feed.
+- `tools/env-set.sh KEY` — takes the value from the clipboard and stores it
+  as `KEY` in `../.env` and in the Vercel production environment, so a
+  registrar key never passes through a terminal or a chat.
+  `tools/env-push.sh` copies every known key from `../.env` to Vercel.
 - `build.mjs` — writes `dist/`: the data as `data.json`, the bundled
   script, the service worker (`src/sw.js`, which keeps the page openable
   offline and caches no availability answer), icons, share card, manifest,

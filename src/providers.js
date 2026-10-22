@@ -92,18 +92,20 @@ export function parseNamecom(json, domains) {
 }
 
 /** Spaceship: POST /v1/domains/available with up to 20 names. The shape
-    of the answer is read loosely — an array of items, each naming its
-    domain and whether it is available — until a key confirms it. */
+    of the answer is { domains: [{ domain, result: "available" | "taken",
+    premiumPricing: [] }] }, verified live on 22 Oct 2026; older guesses at
+    the shape are still read. */
 export function parseSpaceship(json, domains) {
   const out = {};
-  const items = Array.isArray(json) ? json : json?.items ?? json?.results ?? json?.domains ?? [];
+  const items = Array.isArray(json) ? json : json?.domains ?? json?.items ?? json?.results ?? [];
   for (const it of items) {
     const name = low(it?.domain ?? it?.name ?? it?.domainName);
     if (!name) continue;
-    const a = it.available ?? it.isAvailable ?? it.availability ?? it.status;
-    const free = bool(a) || low(a) === "available";
+    const a = it.result ?? it.available ?? it.isAvailable ?? it.availability ?? it.status;
+    const premium = bool(it.premium) || bool(it.isPremium) || (Array.isArray(it.premiumPricing) && it.premiumPricing.length > 0) || low(a) === "premium";
+    const free = bool(a) || low(a) === "available" || low(a) === "premium";
     const gone = a === false || low(a) === "false" || low(a) === "unavailable" || low(a) === "taken" || low(a) === "registered";
-    out[name] = free ? (bool(it.premium) || bool(it.isPremium) ? "premium" : "free") : gone ? "taken" : "silent";
+    out[name] = free ? (premium ? "premium" : "free") : gone ? "taken" : low(a) === "reserved" ? "reserved" : "silent";
   }
   for (const d of domains) out[d] ??= "silent";
   return out;

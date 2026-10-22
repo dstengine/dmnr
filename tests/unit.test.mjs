@@ -142,6 +142,10 @@ test("parseSpaceship reads the answer loosely", () => {
   assert.deepEqual(parseSpaceship({ items: [{ domain: "a.com", available: true }, { domain: "b.com", available: false }, { name: "c.com", status: "available", isPremium: true }] }, ["a.com", "b.com", "c.com", "d.com"]),
     { "a.com": "free", "b.com": "taken", "c.com": "premium", "d.com": "silent" });
   assert.deepEqual(parseSpaceship([{ domain: "a.com", availability: "unavailable" }], ["a.com"]), { "a.com": "taken" });
+  assert.deepEqual(parseSpaceship({ domains: [
+    { domain: "google.com", result: "taken", premiumPricing: [] }, { domain: "z.com", result: "available", premiumPricing: [] },
+    { domain: "p.com", result: "available", premiumPricing: [{ price: 1 }] }, { domain: "r.com", result: "reserved" },
+  ] }, ["google.com", "z.com", "p.com", "r.com"]), { "google.com": "taken", "z.com": "free", "p.com": "premium", "r.com": "reserved" });
 });
 test("parseGandi: the create product's status", () => {
   assert.equal(parseGandi({ products: [{ name: "a.com", process: "create", status: "available" }] }), "free");
