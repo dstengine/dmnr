@@ -1,9 +1,22 @@
-// Serves dist/ with api/check mounted the way Vercel mounts it, for the
-// e2e run and for a look in a browser: node tests/server.mjs → :4174.
+// Serves dist/ with api/check and api/avail mounted the way Vercel mounts
+// them, for the e2e run and for a look in a browser: node tests/server.mjs
+// → :4174. The registrars' keys come from ../../.env (KEY=value lines),
+// the same file tools/prices.mjs reads; without it api/avail answers with
+// no sources, as a deployment without keys does.
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
 import { extname } from "node:path";
 import check from "../api/check.js";
+import avail from "../api/avail.js";
+
+const envFile = new URL("../../.env", import.meta.url);
+if (existsSync(envFile)) {
+  for (const line of readFileSync(envFile, "utf8").split("\n")) {
+    const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
+  }
+}
 
 const types = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
@@ -13,13 +26,14 @@ const types = {
 export function serve(port) {
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost");
-    if (url.pathname === "/api/check") {
+    const fn = url.pathname === "/api/check" ? check : url.pathname === "/api/avail" ? avail : null;
+    if (fn) {
       const shim = {
         status(code) { res.statusCode = code; return shim; },
         setHeader(k, v) { res.setHeader(k, v); },
         json(body) { res.setHeader("content-type", "application/json"); res.end(JSON.stringify(body)); },
       };
-      await check({ query: Object.fromEntries(url.searchParams) }, shim);
+      await fn({ query: Object.fromEntries(url.searchParams) }, shim);
       return;
     }
     const path = url.pathname === "/" ? "/index.html" : url.pathname;

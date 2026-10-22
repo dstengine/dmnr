@@ -27,12 +27,25 @@ export type Availability = "idle" | "checking" | "available" | "taken" | "reserv
 /** What the registry's RDAP server said: a record, no record, a name it withholds, or no usable answer. */
 export type RdapAnswer = "found" | "not-found" | "reserved" | "unavailable";
 
+/** One source's word on a name. "premium" is free at a price the tables do
+    not show; "silent" is a source that was asked and did not answer in
+    time, or refused; "na" is a source that does not deal in the extension
+    and so was never really asked. */
+export type Vote = "free" | "taken" | "reserved" | "premium" | "silent" | "na";
+
+/** Every source that can be asked about a name, browser side and server
+    side. The server names which of its sources are configured. */
+export type Source = "dns" | "dns2" | "rdap" | string;
+
 export interface Row {
   domain: string;
   ext: Extension;
   state: Availability;
-  /** What answered: dns, rdap, or nothing yet. */
-  via?: "dns" | "rdap";
+  /** What each source said, once it has. */
+  votes: Partial<Record<Source, Vote>>;
+  /** How sure the verdict is, 0–100: the sources that said free, out of
+      those that could have answered. Set with the state. */
+  sure?: number;
   /** Why the name is withheld, as the row shows it: the registry's own words, or the rule. */
   note?: string;
 }
@@ -158,12 +171,54 @@ export function shortLabelHint(label: string, tld: string): string | null {
   return "Two-character names are withheld or sold as premium names in most generic extensions, so the standard price shown is unlikely to apply.";
 }
 
-/** A row's state from the two answers a check can collect. */
-export function judge(dns: "has-ns" | "no-ns" | "failed", rdap: RdapAnswer | "none"): { state: Availability; via?: "dns" | "rdap" } {
-  if (dns === "has-ns") return { state: "taken", via: "dns" };
-  if (rdap === "found") return { state: "taken", via: "rdap" };
-  if (rdap === "reserved") return { state: "reserved", via: "rdap" };
-  if (rdap === "not-found") return { state: "available", via: "rdap" };
-  if (dns === "no-ns" && rdap === "none") return { state: "maybe", via: "dns" };
-  return { state: "unknown" };
+/** The names of the sources as the row shows them. */
+export const SOURCE_NAMES: Record<string, string> = {
+  dns: "Cloudflare DNS", dns2: "Google DNS", rdap: "the registry",
+  godaddy: "GoDaddy", porkbun: "Porkbun", dynadot: "Dynadot", namesilo: "NameSilo", namecom: "Name.com", spaceship: "Spaceship", gandi: "Gandi",
+};
+
+/** A row's state from what the sources said. One "taken" settles it: a
+    name with nameservers, a registry record or a registrar's "no" is not
+    free whatever the others say. "reserved" is the registry's word, or
+    ICANN's rule. Otherwise the verdict is a share: the sources that said
+    free (a premium price is free, at a price), out of the sources that
+    deal in the extension. All of them is "available"; some of them is
+    "likely free" with the share beside it; none of them is "ask the
+    registrar". Sources that were never asked ("na") do not count. */
+export function verdict(votes: Partial<Record<Source, Vote>>): { state: Availability; sure: number } {
+  const said = Object.values(votes).filter((v): v is Vote => v !== undefined && v !== "na");
+  if (said.includes("taken")) return { state: "taken", sure: 100 };
+  if (said.includes("reserved")) return { state: "reserved", sure: 100 };
+  if (!said.length) return { state: "unknown", sure: 0 };
+  const free = said.filter((v) => v === "free" || v === "premium").length;
+  const sure = Math.round((100 * free) / said.length);
+  if (!free) return { state: "unknown", sure: 0 };
+  return { state: sure === 100 ? "available" : "maybe", sure };
+}
+
+/** The sources' answers in words, for the row's tooltip: who said free,
+    who said nothing, who was never asked. */
+export function explain(votes: Partial<Record<Source, Vote>>): string {
+  const name = (s: string) => SOURCE_NAMES[s] ?? s;
+  const by = (want: Vote[]) => Object.entries(votes).filter(([, v]) => v && want.includes(v)).map(([s]) => name(s));
+  const parts: string[] = [];
+  const taken = by(["taken"]), reserved = by(["reserved"]), free = by(["free"]), premium = by(["premium"]), silent = by(["silent"]);
+  if (taken.length) parts.push(`${taken.join(", ")}: taken`);
+  if (reserved.length) parts.push(`${reserved.join(", ")}: reserved`);
+  if (free.length) parts.push(`${free.join(", ")}: free`);
+  if (premium.length) parts.push(`${premium.join(", ")}: free at a premium price`);
+  if (silent.length) parts.push(`${silent.join(", ")}: no answer`);
+  return parts.join(" · ");
+}
+
+/** The RDAP answer as a vote. */
+export function rdapVote(a: RdapAnswer | "none"): Vote {
+  return a === "found" ? "taken" : a === "not-found" ? "free" : a === "reserved" ? "reserved" : a === "none" ? "na" : "silent";
+}
+
+/** The length bucket of an extension, for the filter: the letters in it,
+    dots aside, so co.uk is 4 and com is 3. */
+export function lengthBucket(tld: string): "2" | "3" | "4" {
+  const n = tld.replace(/\./g, "").length;
+  return n <= 2 ? "2" : n === 3 ? "3" : "4";
 }

@@ -1,13 +1,16 @@
 // The parts with no browser in them: what typed text means, how rows are
-// ordered, how prices print, where an extension's RDAP server is, what the
-// api/check handler refuses, and what the service worker precaches. Run:
-// npm run build && npm test
+// ordered, how the votes make a verdict, how prices print, where an
+// extension's RDAP server is, what the registrars' answers mean, what the
+// api/check and api/avail handlers refuse, and what the service worker
+// precaches. Run: npm run build && npm test
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { best, icannReserved, judge, money, order, parse, rdapFor, shortLabelHint } from "../src/model.ts";
+import { best, explain, icannReserved, lengthBucket, money, order, parse, rdapFor, rdapVote, shortLabelHint, verdict } from "../src/model.ts";
 import { answer404, refusal } from "../src/refusal.js";
+import { askAll, enabled, parseDynadot, parseGandi, parseGodaddy, parseNamecom, parseNamesilo, parsePorkbun, parseSpaceship } from "../src/providers.js";
 import check from "../api/check.js";
+import avail, { MAX } from "../api/avail.js";
 
 const known = ["com", "uk", "co.uk", "xyz", "co"];
 
@@ -77,16 +80,124 @@ test("rdapFor walks up to the registry", () => {
   assert.equal(rdapFor("uk", servers), "https://rdap.nominet.uk/uk/");
   assert.equal(rdapFor("io", servers), null);
 });
-test("judge", () => {
-  assert.deepEqual(judge("has-ns", "none"), { state: "taken", via: "dns" });
-  assert.deepEqual(judge("no-ns", "found"), { state: "taken", via: "rdap" });
-  assert.deepEqual(judge("no-ns", "not-found"), { state: "available", via: "rdap" });
-  assert.deepEqual(judge("no-ns", "reserved"), { state: "reserved", via: "rdap" });
-  assert.deepEqual(judge("has-ns", "reserved"), { state: "taken", via: "dns" });
-  assert.deepEqual(judge("failed", "not-found"), { state: "available", via: "rdap" });
-  assert.deepEqual(judge("no-ns", "none"), { state: "maybe", via: "dns" });
-  assert.deepEqual(judge("no-ns", "unavailable"), { state: "unknown" });
-  assert.deepEqual(judge("failed", "none"), { state: "unknown" });
+test("verdict: one taken settles it, reserved next, then the share of sources that said free", () => {
+  assert.deepEqual(verdict({ dns: "taken", dns2: "free", rdap: "free", godaddy: "free" }), { state: "taken", sure: 100 });
+  assert.deepEqual(verdict({ dns: "free", dns2: "free", rdap: "reserved" }), { state: "reserved", sure: 100 });
+  assert.deepEqual(verdict({ dns: "free", dns2: "free", rdap: "free", godaddy: "free" }), { state: "available", sure: 100 });
+  assert.deepEqual(verdict({ dns: "free", dns2: "free", rdap: "free", godaddy: "premium" }), { state: "available", sure: 100 });
+  assert.deepEqual(verdict({ dns: "free", dns2: "free", rdap: "silent", godaddy: "silent", namesilo: "free" }), { state: "maybe", sure: 60 });
+  // Sources that do not deal in the extension were never asked.
+  assert.deepEqual(verdict({ dns: "free", dns2: "free", rdap: "na", godaddy: "na" }), { state: "available", sure: 100 });
+  assert.deepEqual(verdict({ dns: "silent", dns2: "silent", rdap: "silent" }), { state: "unknown", sure: 0 });
+  assert.deepEqual(verdict({ dns: "na", rdap: "na" }), { state: "unknown", sure: 0 });
+  assert.deepEqual(verdict({}), { state: "unknown", sure: 0 });
+});
+test("rdapVote and lengthBucket", () => {
+  assert.equal(rdapVote("found"), "taken");
+  assert.equal(rdapVote("not-found"), "free");
+  assert.equal(rdapVote("reserved"), "reserved");
+  assert.equal(rdapVote("unavailable"), "silent");
+  assert.equal(rdapVote("none"), "na");
+  assert.equal(lengthBucket("uk"), "2");
+  assert.equal(lengthBucket("com"), "3");
+  assert.equal(lengthBucket("co.uk"), "4");
+  assert.equal(lengthBucket("agency"), "4");
+});
+test("explain names who said what, in words a tooltip can carry", () => {
+  const words = explain({ dns: "free", dns2: "silent", rdap: "free", godaddy: "premium", namesilo: "taken", gandi: "na" });
+  assert.equal(words, "NameSilo: taken · Cloudflare DNS, the registry: free · GoDaddy: free at a premium price · Google DNS: no answer");
+  assert.equal(explain({}), "");
+});
+
+// ---- the registrars' answers, as their documentation shows them
+test("parseGodaddy: available, taken, an unsupported extension, a name it never answered", () => {
+  const got = parseGodaddy({
+    domains: [{ domain: "A.com", available: true, definitive: true }, { domain: "b.com", available: false }],
+    errors: [{ domain: "c.zz", code: "UNSUPPORTED_TLD", message: "TLD zz is not supported" }],
+  }, ["a.com", "b.com", "c.zz", "d.com"]);
+  assert.deepEqual(got, { "a.com": "free", "b.com": "taken", "c.zz": "na", "d.com": "silent" });
+});
+test("parsePorkbun: yes/no with premium, unresolved is silence, invalid is not sold", () => {
+  const got = parsePorkbun({
+    status: "SUCCESS", checked: 3,
+    domains: { "a.com": { avail: "yes", premium: "no" }, "b.com": { response: { avail: "no" } }, "p.com": { avail: "yes", premium: "yes" } },
+    unresolved: ["u.com"], invalid: [{ domain: "x.zz", reason: "unsupported" }],
+  }, ["a.com", "b.com", "p.com", "u.com", "x.zz", "n.com"]);
+  assert.deepEqual(got, { "a.com": "free", "b.com": "taken", "p.com": "premium", "u.com": "silent", "x.zz": "na", "n.com": "silent" });
+});
+test("parseNamesilo: lists as arrays or as one object", () => {
+  assert.deepEqual(parseNamesilo({ reply: { code: 300, available: [{ domain: "a.com", price: 9.99 }], unavailable: ["b.com"], invalid: [{ domain: "c.zz" }] } }, ["a.com", "b.com", "c.zz", "d.com"]),
+    { "a.com": "free", "b.com": "taken", "c.zz": "na", "d.com": "silent" });
+  assert.deepEqual(parseNamesilo({ reply: { available: { domain: "a.com", price: 9.99, premium: 1 }, unavailable: { domain: "b.com" } } }, ["a.com", "b.com"]),
+    { "a.com": "premium", "b.com": "taken" });
+});
+test("parseNamecom: purchasable with premium, a reason that says the extension is not sold", () => {
+  const got = parseNamecom({ results: [
+    { domainName: "a.com", purchasable: true, premium: false }, { domainName: "p.com", purchasable: true, premium: true },
+    { domainName: "b.com", purchasable: false, reason: "already registered" }, { domainName: "c.zz", purchasable: false, reason: "TLD not supported" },
+  ] }, ["a.com", "p.com", "b.com", "c.zz", "d.com"]);
+  assert.deepEqual(got, { "a.com": "free", "p.com": "premium", "b.com": "taken", "c.zz": "na", "d.com": "silent" });
+});
+test("parseSpaceship reads the answer loosely", () => {
+  assert.deepEqual(parseSpaceship({ items: [{ domain: "a.com", available: true }, { domain: "b.com", available: false }, { name: "c.com", status: "available", isPremium: true }] }, ["a.com", "b.com", "c.com", "d.com"]),
+    { "a.com": "free", "b.com": "taken", "c.com": "premium", "d.com": "silent" });
+  assert.deepEqual(parseSpaceship([{ domain: "a.com", availability: "unavailable" }], ["a.com"]), { "a.com": "taken" });
+});
+test("parseGandi: the create product's status", () => {
+  assert.equal(parseGandi({ products: [{ name: "a.com", process: "create", status: "available" }] }), "free");
+  assert.equal(parseGandi({ products: [{ name: "a.com", process: "create", status: "unavailable" }] }), "taken");
+  assert.equal(parseGandi({ products: [{ name: "a.com", process: "create", status: "unavailable_premium" }] }), "premium");
+  assert.equal(parseGandi({ products: [{ name: "a.com", process: "create", status: "pending" }] }), "silent");
+  assert.equal(parseGandi({ products: [{ name: "a.com", process: "create", status: "reserved_corporate" }] }), "na");
+  assert.equal(parseGandi({}), "silent");
+});
+test("parseDynadot: yes/no, and the busy answers are silence", () => {
+  assert.deepEqual(parseDynadot({ SearchResponse: { ResponseCode: "0", SearchResults: [
+    { DomainName: "a.com", Available: "yes", Price: "9.99 in USD" }, { DomainName: "b.com", Available: "no" }, { DomainName: "c.com", Available: "over_quota" },
+  ] } }, ["a.com", "b.com", "c.com", "d.com"]), { "a.com": "free", "b.com": "taken", "c.com": "silent", "d.com": "silent" });
+});
+test("GoDaddy: when the bulk call is over its monthly quota, the names are asked one by one", async () => {
+  const calls = [];
+  const fetcher = async (url) => {
+    const u = String(url);
+    calls.push(u);
+    if (!u.includes("domain=")) return new Response(JSON.stringify({ code: "QUOTA_EXCEEDED", message: "The monthly quota for requests has been exceeded." }), { status: 429 });
+    const d = new URL(u).searchParams.get("domain");
+    if (d === "slow.com") return new Response("", { status: 429 });
+    if (d === "dmnr.uk") return new Response(JSON.stringify({ code: "UNSUPPORTED_TLD", message: "Invalid tld error: No config for dmnr.uk" }), { status: 422 });
+    return new Response(JSON.stringify({ domain: d, available: d.startsWith("free"), definitive: true }), { status: 200 });
+  };
+  const godaddy = enabled({ GODADDY_API_KEY: "k" })[0];
+  const got = await godaddy.ask(["free1.com", "taken1.com", "slow.com", "dmnr.uk"], { GODADDY_API_KEY: "k" }, fetcher);
+  assert.deepEqual(got, { "free1.com": "free", "taken1.com": "taken", "slow.com": "silent", "dmnr.uk": "na" });
+  assert.equal(calls.length, 5);
+});
+test("enabled: a provider is on when every key it names is set", () => {
+  assert.deepEqual(enabled({}), []);
+  assert.deepEqual(enabled({ GODADDY_API_KEY: "k", PORKBUN_API_KEY: "k" }).map((p) => p.id), ["godaddy"]);
+  assert.deepEqual(enabled({ PORKBUN_API_KEY: "k", PORKBUN_SECRET_KEY: "s", NAMESILO_API_KEY: "k" }).map((p) => p.id), ["namesilo", "porkbun"]);
+});
+test("askAll: every enabled provider asked in its batches, a failure is silence, keys never in the answer", async () => {
+  const calls = [];
+  const fetcher = async (url, init) => {
+    const u = String(url);
+    calls.push(u);
+    if (u.includes("godaddy")) return new Response(JSON.stringify({ domains: JSON.parse(init.body).map((d) => ({ domain: d, available: d.startsWith("free") })) }), { status: 200 });
+    if (u.includes("namesilo")) return new Response("oops", { status: 500 });
+    if (u.includes("gandi")) return new Response(JSON.stringify({ products: [{ process: "create", status: "available" }] }), { status: 200 });
+    throw new Error("unexpected " + u);
+  };
+  const env = { GODADDY_API_KEY: "secret-g", NAMESILO_API_KEY: "secret-n", GANDI_PAT: "secret-p" };
+  const out = await askAll(["free1.com", "taken1.com", "free2.com"], env, fetcher);
+  assert.deepEqual(out.sources, ["godaddy", "namesilo", "gandi"]);
+  assert.deepEqual(out.votes, {
+    "free1.com": { godaddy: "free", namesilo: "silent", gandi: "free" },
+    "taken1.com": { godaddy: "taken", namesilo: "silent", gandi: "free" },
+    "free2.com": { godaddy: "free", namesilo: "silent", gandi: "free" },
+  });
+  assert.equal(calls.filter((u) => u.includes("gandi")).length, 3, "Gandi takes one name per call");
+  assert.equal(calls.filter((u) => u.includes("godaddy")).length, 1, "GoDaddy takes the batch in one call");
+  assert.doesNotMatch(JSON.stringify(out), /secret-/);
 });
 
 // Real 404 bodies, as the registries sent them on 21 Oct 2026.
@@ -158,6 +269,32 @@ test("api/check answers null where no registry publishes RDAP", async () => {
   assert.equal(out.code, 200);
   assert.deepEqual(out.body, { domain: "example.no-such-tld-zz", registered: null, server: null });
   assert.match(out.headers["Cache-Control"], /s-maxage=600/);
+});
+
+const callAvail = async (query, env = {}, fetcher) => {
+  const headers = {};
+  let code = 200, body;
+  const res = { status(c) { code = c; return res; }, setHeader(k, v) { headers[k] = v; }, json(b) { body = b; } };
+  await avail({ query }, res, env, fetcher);
+  return { code, body, headers };
+};
+test("api/avail refuses what is not a short list of domains", async () => {
+  for (const domains of ["nodots", "a.com,-bad.com", "a b.com", Array.from({ length: MAX + 1 }, (_, i) => `d${i}.com`).join(",")]) {
+    assert.equal((await callAvail({ domains })).code, 400, domains.slice(0, 40));
+  }
+});
+test("api/avail with no keys names no sources, and says so without a list too", async () => {
+  const bare = await callAvail({});
+  assert.deepEqual(bare.body, { sources: [], votes: {} });
+  const out = await callAvail({ domains: "B.com,a.com,a.com" });
+  assert.equal(out.code, 200);
+  assert.deepEqual(out.body, { sources: [], votes: { "a.com": {}, "b.com": {} } });
+  assert.match(out.headers["Cache-Control"], /s-maxage=600/);
+});
+test("api/avail asks the configured registrars and hands the votes back", async () => {
+  const fetcher = async (url, init) => new Response(JSON.stringify({ domains: JSON.parse(init.body).map((d) => ({ domain: d, available: d === "a.com" })) }), { status: 200 });
+  const out = await callAvail({ domains: "a.com,b.com" }, { GODADDY_API_KEY: "k" }, fetcher);
+  assert.deepEqual(out.body, { sources: ["godaddy"], votes: { "a.com": { godaddy: "free" }, "b.com": { godaddy: "taken" } } });
 });
 
 // ---- the service worker agrees with the page it caches (needs dist/)

@@ -1,15 +1,27 @@
 // The search in the browser: the typed name becomes one row per extension,
-// the rows are ordered cheapest first and checked a few at a time — over
-// DNS first, then at the registry's RDAP server, through api/check where a
-// registry refuses browsers. model.ts holds the parts with no DOM in them.
-import { best, icannReserved, judge, money, order, parse, shortLabelHint, type Availability, type RdapAnswer, type Row, type Sort, type Tables } from "./model";
+// the rows are ordered cheapest first and every one is checked — at two
+// DNS resolvers and the registry's RDAP server from here (through
+// api/check where a registry refuses browsers), then, in batches, at the
+// registrars' own APIs through api/avail. Each source casts a vote; the
+// verdict and how sure it is come from model.ts, which holds the parts
+// with no DOM in them.
+import { best, explain, icannReserved, lengthBucket, money, order, parse, rdapVote, shortLabelHint, verdict, type Availability, type RdapAnswer, type Row, type Sort, type Tables, type Vote } from "./model";
 import { answer404 } from "./refusal.js";
 
 declare const __VERSION__: string;
+/** Rows in the document at a time; every row is checked whether shown or not. */
 const PAGE = 60;
-const WORKERS = 6;
+/** Rows checked at once from the browser. */
+const WORKERS = 8;
+/** Names per api/avail call, and calls in flight. */
+const BATCH = 20;
+const INFLIGHT = 3;
+const FLUSH = 250;
 const TIMEOUT = 8000;
-const DOH = "https://cloudflare-dns.com/dns-query";
+const RESOLVERS: [key: "dns" | "dns2", url: string][] = [
+  ["dns", "https://cloudflare-dns.com/dns-query"],
+  ["dns2", "https://dns.google/resolve"],
+];
 
 const $ = <T extends Element>(sel: string): T => document.querySelector(sel) as T;
 const form = $<HTMLFormElement>("[data-form]");
@@ -21,6 +33,7 @@ const list = $<HTMLOListElement>("[data-rows]");
 const more = $<HTMLButtonElement>("[data-more]");
 const moreLabel = more.querySelector("span")!;
 const onlyFree = $<HTMLButtonElement>("[data-only-free]");
+const unverified = $<HTMLButtonElement>("[data-unverified]");
 
 let tables: Tables | null = null;
 let known: string[] = [];
@@ -32,9 +45,14 @@ let pinned: string | null = null;
 let name = "";
 let shown = 0;
 let controller: AbortController | null = null;
-let run: { signal: AbortSignal; active: number } | null = null;
+/** One search: its abort signal, the browser workers busy, and the rows
+    waiting for the registrars with the batch timer and the calls in flight. */
+interface Run { signal: AbortSignal; active: number; queue: Row[]; timer: number; inflight: number }
+let run: Run | null = null;
 /** RDAP servers that refused the browser once: the rest go through api/check. */
 const noCors = new Set<string>();
+/** The registrars api/avail has keys for, as its last answer named them. */
+let serverSources: string[] = [];
 
 const LABELS: Record<Availability, [icon: string, text: string]> = {
   idle: ["", "queued"],
@@ -88,9 +106,10 @@ function search() {
   pinned = q.pinned;
   history.replaceState(null, "", `?q=${encodeURIComponent(raw.trim())}`);
   controller?.abort();
+  if (run) clearTimeout(run.timer);
   controller = new AbortController();
-  run = { signal: controller.signal, active: 0 };
-  rows = known.map((tld) => ({ domain: `${name}.${tld}`, ext: tables!.tlds[tld], state: "idle" as Availability }));
+  run = { signal: controller.signal, active: 0, queue: [], timer: 0, inflight: 0 };
+  rows = known.map((tld) => ({ domain: `${name}.${tld}`, ext: tables!.tlds[tld], state: "idle" as Availability, votes: {} }));
   ordered = order(rows, sort, pinned);
   shown = Math.min(PAGE, ordered.length);
   tools.hidden = false;
@@ -102,6 +121,7 @@ function search() {
 
 function clear() {
   controller?.abort();
+  if (run) clearTimeout(run.timer);
   controller = null;
   run = null;
   name = "";
@@ -120,7 +140,7 @@ function render() {
   list.replaceChildren(...ordered.slice(0, shown).map(rowEl));
   const left = ordered.length - shown;
   more.hidden = left <= 0;
-  moreLabel.textContent = `Check ${Math.min(PAGE, left)} more`;
+  moreLabel.textContent = `Show ${Math.min(PAGE, left)} more`;
 }
 
 function el(tag: string, className: string): HTMLElement {
@@ -134,6 +154,7 @@ function rowEl(row: Row): HTMLLIElement {
   if (li) return li;
   li = document.createElement("li");
   li.className = "row";
+  li.dataset.len = lengthBucket(row.ext.tld);
   const head = el("div", "row-head");
   const dom = el("span", "dom");
   const tld = document.createElement("b");
@@ -170,23 +191,28 @@ function updateRow(row: Row) {
   li.dataset.state = row.state;
   const [icon, text] = LABELS[row.state];
   const st = li.querySelector(".state")!;
-  st.innerHTML = (icon ? `<svg class="ico" aria-hidden="true"><use href="#${icon}"/></svg>` : "") + text;
-  if (row.via) st.setAttribute("title", row.via === "dns" ? "Answered by DNS: the name has nameservers" : "Answered by the registry's RDAP server");
+  const share = row.state === "maybe" && row.sure ? `<span class="sure">${row.sure}%</span>` : "";
+  st.innerHTML = (icon ? `<svg class="ico" aria-hidden="true"><use href="#${icon}"/></svg>` : "") + text + share;
+  const why = explain(row.votes);
+  if (why) st.setAttribute("title", why);
+  else st.removeAttribute("title");
   li.querySelector(".note")!.textContent = row.note ?? "";
 }
 
+/** Rows idle in reading order, shown ones first, a few at a time; each
+    one's browser checks run here, and the registrars' turn is queued. */
 function pump() {
   const r = run;
   if (!r) return;
   while (r.active < WORKERS) {
-    const next = ordered.slice(0, shown).find((x) => x.state === "idle");
+    const next = ordered.find((x) => x.state === "idle");
     if (!next) break;
     next.state = "checking";
     updateRow(next);
     r.active++;
-    check(next, r.signal)
+    check(next, r)
       .catch(() => {
-        next.state = "unknown";
+        settle(next);
       })
       .finally(() => {
         if (r.signal.aborted) return;
@@ -208,33 +234,54 @@ function timed(parent: AbortSignal): AbortSignal {
   return c.signal;
 }
 
-async function check(row: Row, signal: AbortSignal) {
-  let dns: "has-ns" | "no-ns" | "failed" = "failed";
-  try {
-    const r = await fetch(`${DOH}?name=${row.domain}&type=NS`, { headers: { accept: "application/dns-json" }, signal: timed(signal) });
-    const j = (await r.json()) as { Status: number; Answer?: { type: number }[] };
-    if (j.Status === 0 && (j.Answer ?? []).some((a) => a.type === 2)) dns = "has-ns";
-    else if (j.Status === 3 || j.Status === 0) dns = "no-ns";
-  } catch (e) {
-    if (signal.aborted) throw e;
+/** The verdict from the votes in hand. */
+function settle(row: Row) {
+  const v = verdict(row.votes);
+  row.state = v.state;
+  row.sure = v.sure;
+  if ((v.state === "available" || v.state === "maybe") && !row.note) {
+    const label = row.domain.slice(0, -(row.ext.tld.length + 1));
+    row.note = shortLabelHint(label, row.ext.tld) ?? undefined;
   }
+}
+
+async function check(row: Row, r: Run) {
+  const { signal } = r;
+  const dns = await Promise.all(RESOLVERS.map(([, url]) => askDns(url, row.domain, signal)));
+  RESOLVERS.forEach(([key], i) => { row.votes[key] = dns[i]; });
   const label = row.domain.slice(0, -(row.ext.tld.length + 1));
-  if (dns !== "has-ns") {
+  if (!dns.includes("taken")) {
     // Withheld under every gTLD's registry agreement: the rule answers, not a server.
     const icann = icannReserved(label, row.ext.tld);
     if (icann) {
-      row.state = "reserved";
+      row.votes.rdap = "reserved";
       row.note = icann;
-      row.via = undefined;
+      settle(row);
       return;
     }
+    row.votes.rdap = row.ext.rdap ? rdapVote(await askRdap(row, signal)) : "na";
+  } else {
+    row.votes.rdap = "na";
   }
-  let rdap: RdapAnswer | "none" = "none";
-  if (dns !== "has-ns" && row.ext.rdap) rdap = await askRdap(row, signal);
-  const v = judge(dns, rdap);
-  row.state = v.state;
-  row.via = v.via;
-  if ((v.state === "available" || v.state === "maybe") && !row.note) row.note = shortLabelHint(label, row.ext.tld) ?? undefined;
+  if (row.votes.rdap === "taken" || row.votes.rdap === "reserved" || dns.includes("taken") || navigator.onLine === false) {
+    settle(row);
+    return;
+  }
+  // Not settled by DNS or the registry: the registrars get a say, in a batch.
+  enqueue(row, r);
+}
+
+async function askDns(url: string, domain: string, signal: AbortSignal): Promise<Vote> {
+  try {
+    const r = await fetch(`${url}?name=${domain}&type=NS`, { headers: { accept: "application/dns-json" }, signal: timed(signal) });
+    const j = (await r.json()) as { Status: number; Answer?: { type: number }[] };
+    if (j.Status === 0 && (j.Answer ?? []).some((a) => a.type === 2)) return "taken";
+    if (j.Status === 3 || j.Status === 0) return "free";
+    return "silent";
+  } catch (e) {
+    if (signal.aborted) throw e;
+    return "silent";
+  }
 }
 
 async function askRdap(row: Row, signal: AbortSignal): Promise<RdapAnswer> {
@@ -269,25 +316,69 @@ async function askRdap(row: Row, signal: AbortSignal): Promise<RdapAnswer> {
 function withheld(row: Row, text: string): RdapAnswer {
   const a = answer404(text);
   if (a.note) row.note = said(a.note);
-  return a.state;
+  return a.state as RdapAnswer;
 }
 
 const said = (words: string) => `The registry says: “${words}”`;
 
+/** Rows for the registrars wait for a batch: twenty names, or a quarter
+    of a second, whichever comes first, three batches in flight. */
+function enqueue(row: Row, r: Run) {
+  r.queue.push(row);
+  clearTimeout(r.timer);
+  if (r.queue.length >= BATCH) flush(r);
+  else r.timer = window.setTimeout(() => flush(r), FLUSH);
+}
+
+function flush(r: Run) {
+  clearTimeout(r.timer);
+  while (r.queue.length && r.inflight < INFLIGHT) {
+    const batch = r.queue.splice(0, BATCH);
+    r.inflight++;
+    askRegistrars(batch, r.signal)
+      // A new search aborts the batch; the rows are gone with it.
+      .catch(() => {})
+      .finally(() => {
+        if (r.signal.aborted) return;
+        r.inflight--;
+        for (const row of batch) updateRow(row);
+        updateStatus();
+        if (r.queue.length) flush(r);
+      });
+  }
+  if (r.queue.length) r.timer = window.setTimeout(() => flush(r), FLUSH);
+}
+
+async function askRegistrars(batch: Row[], signal: AbortSignal) {
+  let sources = serverSources;
+  let votes: Record<string, Record<string, Vote>> = {};
+  try {
+    const r = await fetch(`api/avail?domains=${batch.map((x) => x.domain).sort().join(",")}`, { signal: timed(signal) });
+    const j = (await r.json()) as { sources?: string[]; votes?: typeof votes };
+    if (j.sources) serverSources = sources = j.sources;
+    votes = j.votes ?? {};
+  } catch (e) {
+    if (signal.aborted) throw e;
+  }
+  for (const row of batch) {
+    for (const s of sources) row.votes[s] = votes[row.domain]?.[s] ?? "silent";
+    settle(row);
+  }
+}
+
 function updateStatus() {
-  const win = ordered.slice(0, shown);
-  const done = win.filter((r) => r.state !== "idle" && r.state !== "checking").length;
-  const free = win.filter((r) => r.state === "available" || r.state === "maybe").length;
+  const done = ordered.filter((r) => r.state !== "idle" && r.state !== "checking").length;
+  const free = ordered.filter((r) => r.state === "available" || r.state === "maybe").length;
   const nw = (s: string) => `<span class="nowrap">${s}</span>`;
   // Without a connection the prices still show; the checks cannot run, so
   // the line must not say they did.
   if (navigator.onLine === false) {
-    status.innerHTML = `Offline: prices only, the checks need a connection · ${nw(`${win.length} of ${ordered.length}`)} extensions shown`;
+    status.innerHTML = `Offline: prices only, the checks need a connection · ${nw(`${Math.min(shown, ordered.length)} of ${ordered.length}`)} extensions shown`;
     return;
   }
-  status.innerHTML = done < win.length
-    ? `Checking ${nw(`${done} of ${win.length}`)} · ${nw(`${free} available`)} so far`
-    : `${nw(`${win.length} of ${ordered.length}`)} extensions checked · ${nw(`${free} available`)}`;
+  status.innerHTML = done < ordered.length
+    ? `Checking ${nw(`${done} of ${ordered.length}`)} · ${nw(`${free} available`)} so far`
+    : `${nw(`${ordered.length} extensions checked`)} · ${nw(`${free} available`)}`;
 }
 addEventListener("online", () => rows.length && updateStatus());
 addEventListener("offline", () => rows.length && updateStatus());
@@ -312,15 +403,26 @@ for (const b of document.querySelectorAll<HTMLButtonElement>("[data-sort]")) {
     updateStatus();
   });
 }
-onlyFree.addEventListener("click", () => {
-  const on = onlyFree.getAttribute("aria-pressed") !== "true";
-  onlyFree.setAttribute("aria-pressed", String(on));
-  list.toggleAttribute("data-only-free", on);
-});
+const toggle = (b: HTMLButtonElement, attr: string) => {
+  b.addEventListener("click", () => {
+    const on = b.getAttribute("aria-pressed") !== "true";
+    b.setAttribute("aria-pressed", String(on));
+    list.toggleAttribute(attr, on);
+  });
+};
+toggle(onlyFree, "data-only-free");
+toggle(unverified, "data-unverified");
+for (const b of document.querySelectorAll<HTMLButtonElement>("[data-len]")) {
+  b.addEventListener("click", () => {
+    for (const x of document.querySelectorAll("[data-len]")) x.setAttribute("aria-pressed", String(x === b));
+    const len = b.dataset.len!;
+    if (len === "any") delete list.dataset.len;
+    else list.dataset.len = len;
+  });
+}
 more.addEventListener("click", () => {
   shown = Math.min(shown + PAGE, ordered.length);
   render();
-  pump();
   updateStatus();
 });
 for (const b of document.querySelectorAll<HTMLButtonElement>("[data-example]")) {

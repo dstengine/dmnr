@@ -1,8 +1,8 @@
 // Drives the built page in Chromium at 320px, light and dark: a fresh name
 // finds available extensions cheapest first, a typed extension is pinned,
-// our own dmnr.uk is taken, the filter and the sort work, a bad name is
-// explained, nothing overflows, and the page talks only to the resolver,
-// the registries and itself. Then, offline: the service worker opens the
+// our own dmnr.uk is taken, the filters and the sort work, a bad name is
+// explained, nothing overflows, and the page talks only to the resolvers,
+// the registries and itself (the registrars are asked through api/avail). Then, offline: the service worker opens the
 // page with its prices and says the checks need a connection. Needs the
 // network: the checks are real.
 // Run: npm run build && npm run e2e
@@ -17,7 +17,7 @@ const BASE = process.env.URL || `http://localhost:${PORT}/`;
 const shots = process.env.SHOTS || ".test";
 mkdirSync(shots, { recursive: true });
 const server = process.env.URL ? null : await serve(PORT);
-const rdapHosts = new Set(Object.values(JSON.parse(readFileSync(new URL("../data/rdap.json", import.meta.url), "utf8")).tlds).map((u) => new URL(u).host));
+const rdapHosts = new Set(["rdap.json", "rdap-extra.json"].flatMap((f) => Object.values(JSON.parse(readFileSync(new URL(`../data/${f}`, import.meta.url), "utf8")).tlds)).map((u) => new URL(u).host));
 const browser = await chromium.launch();
 
 for (const scheme of ["light", "dark"]) {
@@ -43,7 +43,8 @@ for (const scheme of ["light", "dark"]) {
   const fresh = `zq${randomBytes(4).toString("hex")}`;
   await page.fill("[data-q]", fresh);
   await page.waitForFunction(() => document.querySelectorAll(".row").length === 60);
-  await page.waitForFunction(() => /extensions checked/.test(document.querySelector("[data-status]").textContent), null, { timeout: 120000 });
+  // The sixty shown settle first; the rest go on behind them.
+  await page.waitForFunction(() => [...document.querySelectorAll(".row")].every((r) => !/idle|checking/.test(r.dataset.state)), null, { timeout: 180000 });
   const states = await page.$$eval(".row", (rows) => rows.map((r) => r.dataset.state));
   const tally = Object.fromEntries(["available", "taken", "reserved", "maybe", "unknown"].map((s) => [s, states.filter((x) => x === s).length]));
   assert.ok(tally.available >= 1, `no available row for ${fresh}: ${JSON.stringify(tally)}`);
@@ -60,9 +61,18 @@ for (const scheme of ["light", "dark"]) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert.equal(overflow, 0, "the page scrolls sideways at 320px");
 
-  // Sixty more on request.
+  // Sixty more on request; every row carries its length bucket and the
+  // badge says who said what.
   await page.click("[data-more]");
   await page.waitForFunction(() => document.querySelectorAll(".row").length === 120);
+  assert.ok(await page.$$eval(".row", (rows) => rows.every((r) => /^[234]$/.test(r.dataset.len))), "a row without a length bucket");
+  assert.match(await page.$eval(".row .state", (e) => e.title), /DNS|registry/, "the badge does not say who answered");
+  await page.click('[data-len="2"]');
+  assert.ok(await page.$$eval(".row", (rows) => rows.filter((r) => getComputedStyle(r).display !== "none").every((r) => r.dataset.len === "2")), "the length filter shows other lengths");
+  await page.click('[data-len="any"]');
+  await page.click("[data-unverified]");
+  assert.ok(await page.$$eval(".row", (rows) => rows.filter((r) => getComputedStyle(r).display !== "none").every((r) => /maybe|unknown/.test(r.dataset.state))), "unverified shows a settled row");
+  await page.click("[data-unverified]");
 
   // Our own name, with its extension: pinned first, and taken.
   await page.fill("[data-q]", "dmnr.uk");
@@ -99,8 +109,8 @@ for (const scheme of ["light", "dark"]) {
   await page.waitForFunction(() => /nosuchtld/.test(document.querySelector("[data-hint]").textContent));
   await page.waitForFunction(() => document.querySelectorAll(".row").length === 60);
 
-  const others = [...foreign].filter((h) => h !== "cloudflare-dns.com" && !rdapHosts.has(h));
-  assert.deepEqual(others, [], "requests outside the resolver, the registries and the page");
+  const others = [...foreign].filter((h) => h !== "cloudflare-dns.com" && h !== "dns.google" && !rdapHosts.has(h));
+  assert.deepEqual(others, [], "requests outside the resolvers, the registries and the page");
   assert.deepEqual(errors, [], "console errors");
   console.log(`ok  ${scheme}: ${count} extensions; ${fresh}: ${JSON.stringify(tally)}; pinned, filter, sort, hints, no overflow, no outside requests`);
   await ctx.close();

@@ -95,7 +95,7 @@ main { max-width: 640px; margin: 0 auto; padding: 0 16px; }
 .chip { min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); font-size: .9rem; font-weight: 600; }
 .chip:hover { border-color: var(--accent); }
 
-.tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 16px 0 8px; }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0 8px; }
 .seg { display: flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; background: var(--surface); }
 .seg button { display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; min-height: 44px; padding: 0 12px; border-radius: 999px; font-weight: 600; font-size: .85rem; color: var(--muted); white-space: nowrap; }
 .seg button[aria-pressed="true"] { background: var(--tint); color: var(--accent); }
@@ -110,10 +110,11 @@ main { max-width: 640px; margin: 0 auto; padding: 0 16px; }
 /* ---- rows */
 .rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .row { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
-.row-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+/* The badge drops under the name when the two do not fit on a phone, rather than breaking the extension in two. */
+.row-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; min-height: 28px; }
 .dom { font-weight: 700; font-size: 1.05rem; overflow-wrap: anywhere; }
-.dom b { color: var(--accent); font-weight: 700; }
-.state { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: .78rem; font-weight: 600; white-space: nowrap; padding: 3px 9px; border-radius: 999px; background: var(--tint); color: var(--muted); }
+.dom b { color: var(--accent); font-weight: 700; white-space: nowrap; }
+.state { display: inline-flex; align-items: center; gap: 4px; flex: none; margin-left: auto; font-size: .78rem; font-weight: 600; white-space: nowrap; padding: 3px 9px; border-radius: 999px; background: var(--tint); color: var(--muted); }
 .row[data-state="available"] .state, .row[data-state="maybe"] .state { background: var(--ok-tint); color: var(--ok); }
 .row[data-state="taken"] .state, .row[data-state="reserved"] .state { background: var(--line); color: var(--ink); }
 .row[data-state="checking"] .state, .row[data-state="idle"] .state { background: none; border: 1px solid var(--line); }
@@ -136,6 +137,9 @@ main { max-width: 640px; margin: 0 auto; padding: 0 16px; }
 .row[data-state="taken"] .offers, .row[data-state="reserved"] .offers { display: none; }
 .row[data-state="taken"] .from, .note:not(:empty) { display: block; }
 .rows[data-only-free] .row[data-state="taken"], .rows[data-only-free] .row[data-state="reserved"] { display: none; }
+.rows[data-unverified] .row:not([data-state="maybe"]):not([data-state="unknown"]) { display: none; }
+.rows[data-len="2"] .row:not([data-len="2"]), .rows[data-len="3"] .row:not([data-len="3"]), .rows[data-len="4"] .row:not([data-len="4"]) { display: none; }
+.state .sure { margin-left: 4px; padding-left: 6px; border-left: 1px solid currentColor; opacity: .8; font-variant-numeric: tabular-nums; }
 .more-row { margin: 12px 0 0; }
 
 /* ---- about */
