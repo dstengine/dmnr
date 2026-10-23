@@ -1,14 +1,14 @@
 # dmnr.uk
 
 Domain name search: type a name, see which extensions are free and what
-Porkbun, GoDaddy and Dynadot charge for them, cheapest first, with the
+Porkbun, GoDaddy, Dynadot and Marcaria charge for them, cheapest first, with the
 renewal price beside the first-year one. Every extension is checked at
 several sources, and a row is as sure as its sources agree. The list can be
 kept to one country's extensions, and every country-code row names its country.
 
 - `src/` — the page, its styles, and the search (`app.ts`), with the parts
   that need no browser in `model.ts`.
-- `data/` — the tables the page ships: Porkbun's, GoDaddy's and Dynadot's prices,
+- `data/` — the tables the page ships: Porkbun's, GoDaddy's, Dynadot's and Marcaria's prices,
   the IANA RDAP bootstrap, the root-zone list, `rdap-extra.json`, the RDAP
   servers the bootstrap lacks (io, me, de, ch, us…), each checked by hand, and
   `countries.json`, the country of every country-code extension. `node tools/prices.mjs`
@@ -16,7 +16,11 @@ kept to one country's extensions, and every country-code row names its country.
   `godaddy`, `rdap`, `iana`); the GoDaddy pass takes ten minutes at its rate limit and needs
   `GODADDY_API_KEY` in `../.env`. `node tools/countries.mjs` rewrites the country
   table from the root-zone list: ISO codes named by CLDR, the internationalised
-  country-code extensions by hand.
+  country-code extensions by hand. `node tools/marcaria.mjs` rebuilds Marcaria's
+  table from `data/marcaria-countries.txt` and `data/marcaria-gtlds.txt`, two lists
+  read off its price pages in a browser (its site answers robots with 403 and it has
+  no API); the tool says how. Marcaria is the dearest of the four but the only one
+  selling most countries' own zones, so it is what makes the country list long.
 - `api/check.js` — a proxy to the registries' RDAP servers for the ones
   that refuse browsers. `src/refusal.js` reads a registry's reason out of
   its 404, where it gives one: a name the registry withholds is "reserved",
@@ -56,7 +60,10 @@ the extension). `verdict()` in `src/model.ts` turns the votes into the
 row: one `taken` settles it, `reserved` next, otherwise the share of
 sources that said free is the row's confidence — all of them is
 "available", some of them is "likely free · 60%", none is "ask the
-registrar". The badge's tooltip names who said what.
+registrar". Two resolvers alone never make a name available: a name
+without nameservers can still be registered, so where no registry or
+registrar could be asked — most countries' own zones — the row is
+"likely free · 50%". The badge's tooltip names who said what.
 
 The browser asks three sources itself, for every row, eight rows at a
 time: Cloudflare's and Google's resolvers for nameservers, and the
@@ -86,7 +93,10 @@ only votes.
 Not here, and why: Namecheap wants the caller's IP whitelisted; Fastly's
 Domain Research API (the former Domainr) is billed per request; Hostinger
 and IONOS need a hosting account; Cloudflare Registrar, Marcaria and
-Hover publish no API.
+Hover publish no API. Marcaria is in the price tables all the same, as a
+list read by hand, because it is the one registrar that sells most
+countries' own zones; its availability answers are not here, since there
+is nothing to ask.
 
 ## Adding a registrar
 
@@ -95,6 +105,8 @@ A registrar earns a column when all of this holds; one "no" is a no.
 - A price list a script can read with no account and no key, so
   `tools/prices.mjs` can refresh it: JSON, or a page that carries the
   whole table in its markup. A page behind a bot wall cannot be refreshed.
+  Marcaria is the one exception, read by hand through `tools/marcaria.mjs`,
+  and only because no other registrar prices the countries it does.
 - Both prices per extension, the first year and the renewal, as standard
   rates before sales (or with the sale marked so the standard can be read).
 - US dollars: one currency on the page, or "cheapest first" is a lie.

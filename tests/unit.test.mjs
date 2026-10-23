@@ -44,7 +44,7 @@ test("parse: errors say why", () => {
   assert.equal(parse("...", known).name, "");
 });
 
-const ext = (tld, pb, gd, dd = null) => ({ tld, pb, gd, dd, rdap: null });
+const ext = (tld, pb, gd, dd = null, mc = null) => ({ tld, pb, gd, dd, mc, rdap: null });
 test("best: the cheaper registrar, by first year or by renewal", () => {
   const e = ext("xyz", [1.11, 11.44], [0.99, 14.99]);
   assert.deepEqual(best(e), { price: 0.99, who: "gd" });
@@ -54,6 +54,7 @@ test("best: the cheaper registrar, by first year or by renewal", () => {
   assert.deepEqual(best(ext("three", [5, 5], [4, 9], [3, 3])), { price: 3, who: "dd" });
   assert.deepEqual(best(ext("three", [5, 5], [4, 9], [3, 30]), "renewal"), { price: 5, who: "pb" });
   assert.deepEqual(best(ext("only", null, null, [2, 2])), { price: 2, who: "dd" });
+  assert.deepEqual(best(ext("country", null, null, null, [29, 29])), { price: 29, who: "mc" });
 });
 test("order: cheapest first, the pinned extension before everything, unpriced last", () => {
   const rows = [
@@ -86,8 +87,11 @@ test("verdict: one taken settles it, reserved next, then the share of sources th
   assert.deepEqual(verdict({ dns: "free", dns2: "free", rdap: "free", godaddy: "free" }), { state: "available", sure: 100 });
   assert.deepEqual(verdict({ dns: "free", dns2: "free", rdap: "free", godaddy: "premium" }), { state: "available", sure: 100 });
   assert.deepEqual(verdict({ dns: "free", dns2: "free", rdap: "silent", godaddy: "silent", namesilo: "free" }), { state: "maybe", sure: 60 });
-  // Sources that do not deal in the extension were never asked.
-  assert.deepEqual(verdict({ dns: "free", dns2: "free", rdap: "na", godaddy: "na" }), { state: "available", sure: 100 });
+  // Sources that do not deal in the extension were never asked, and two
+  // resolvers alone never make a name available.
+  assert.deepEqual(verdict({ dns: "free", dns2: "free", rdap: "na", godaddy: "na" }), { state: "maybe", sure: 50 });
+  assert.deepEqual(verdict({ dns: "free", dns2: "free", rdap: "na", godaddy: "na", namecom: "free" }), { state: "available", sure: 100 });
+  assert.deepEqual(verdict({ dns: "free", dns2: "silent" }), { state: "maybe", sure: 50 });
   assert.deepEqual(verdict({ dns: "silent", dns2: "silent", rdap: "silent" }), { state: "unknown", sure: 0 });
   assert.deepEqual(verdict({ dns: "na", rdap: "na" }), { state: "unknown", sure: 0 });
   assert.deepEqual(verdict({}), { state: "unknown", sure: 0 });
@@ -335,13 +339,29 @@ test("the service worker precaches what the page loads, stamped with the build's
   assert.match(sw, /startsWith\("\/api\/"\)/);
   assert.match(sw, /startsWith\("\/go\/"\)/);
 });
-test("the shipped tables carry three registrars, each dated, no zero prices", () => {
+test("the shipped tables carry four registrars, each dated, no zero prices, and Marcaria's countries", () => {
   const tables = JSON.parse(readFileSync(built("data.json"), "utf8"));
-  for (const who of ["porkbun", "godaddy", "dynadot"]) assert.match(tables.asOf[who], /^\d{4}-\d{2}-\d{2}$/, `${who} is not dated`);
+  for (const who of ["porkbun", "godaddy", "dynadot", "marcaria"]) assert.match(tables.asOf[who], /^\d{4}-\d{2}-\d{2}$/, `${who} is not dated`);
   const rows = Object.entries(tables.tlds);
-  for (const who of ["pb", "gd", "dd"]) assert.ok(rows.filter(([, e]) => e[who]).length >= 500, `fewer than 500 ${who} prices`);
+  for (const who of ["pb", "gd", "dd", "mc"]) assert.ok(rows.filter(([, e]) => e[who]).length >= 500, `fewer than 500 ${who} prices`);
   assert.ok(rows.some(([, e]) => e.pb && e.gd && e.dd), "no extension priced by all three");
-  for (const [tld, e] of rows) for (const who of ["pb", "gd", "dd"]) if (e[who]) assert.ok(e[who][0] > 0 && e[who][1] > 0, `${tld} ${who} has a zero price`);
+  for (const [tld, e] of rows) for (const who of ["pb", "gd", "dd", "mc"]) if (e[who]) assert.ok(e[who][0] > 0 && e[who][1] > 0, `${tld} ${who} has a zero price`);
+  // Marcaria's coverage: most countries' own zones, priced by it alone.
+  assert.ok(Object.keys(tables.countries).length >= 200, `only ${Object.keys(tables.countries).length} countries have an extension`);
+  for (const tld of ["com.br", "co.jp", "com.ar", "co.za", "com.mx"]) assert.ok(tables.tlds[tld]?.mc, `${tld} has no Marcaria price`);
+  assert.equal(tables.tlds["com.br"].cc, "BR");
+  assert.equal(tables.tlds.edu, undefined, ".edu is not for sale");
+});
+test("data/marcaria.json: the two lists read off Marcaria's site, one price per year each", async () => {
+  const { readFileSync } = await import("node:fs");
+  const m = JSON.parse(readFileSync(new URL("../data/marcaria.json", import.meta.url), "utf8"));
+  assert.match(m.asOf, /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(Object.keys(m.tlds).length >= 1000, `only ${Object.keys(m.tlds).length} extensions`);
+  for (const [tld, p] of Object.entries(m.tlds)) assert.ok(Array.isArray(p) && p[0] > 0 && p[0] === p[1], `${tld}: ${JSON.stringify(p)}`);
+  assert.deepEqual(m.tlds["com.br"], [29, 29]);
+  assert.equal(m.years.ai, 2);
+  assert.equal(m.tlds.edu, undefined);
+  assert.equal(m.tlds.int, undefined);
 });
 test("the page registers the worker and says when it is offline", () => {
   const app = readFileSync(built("app.js"), "utf8");

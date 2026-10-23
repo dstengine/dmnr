@@ -13,6 +13,8 @@ export interface Extension {
   gd: Price | null;
   /** Dynadot's prices, or null. */
   dd: Price | null;
+  /** Marcaria's price per year, or null; it sells most countries' own zones. */
+  mc: Price | null;
   /** The RDAP server that answers for this extension, or null. */
   rdap: string | null;
   /** The country a country-code extension belongs to, ISO 3166-1 alpha-2. */
@@ -20,7 +22,7 @@ export interface Extension {
 }
 
 export interface Tables {
-  asOf: { porkbun: string; godaddy: string; dynadot: string; rdap: string };
+  asOf: { porkbun: string; godaddy: string; dynadot: string; marcaria: string; rdap: string };
   /** The English name of every country the tables have an extension for. */
   countries: Record<string, string>;
   tlds: Record<string, Extension>;
@@ -107,12 +109,12 @@ export function parse(raw: string, known: Iterable<string>): Query {
 
 /** The cheaper of what is offered, and who offers it. */
 /** The registrars with a column, by the key their prices sit under. */
-export type Registrar = "pb" | "gd" | "dd";
+export type Registrar = "pb" | "gd" | "dd" | "mc";
 
 export function best(ext: Extension, by: "registration" | "renewal" = "registration"): { price: number; who: Registrar } | null {
   const i = by === "renewal" ? 1 : 0;
   const offers: { price: number; who: Registrar }[] = [];
-  for (const who of ["pb", "gd", "dd"] as const) {
+  for (const who of ["pb", "gd", "dd", "mc"] as const) {
     const p = ext[who];
     if (p) offers.push({ price: p[i], who });
   }
@@ -188,7 +190,10 @@ export const SOURCE_NAMES: Record<string, string> = {
     free (a premium price is free, at a price), out of the sources that
     deal in the extension. All of them is "available"; some of them is
     "likely free" with the share beside it; none of them is "ask the
-    registrar". Sources that were never asked ("na") do not count. */
+    registrar". Sources that were never asked ("na") do not count. Two
+    resolvers alone never make a name available: a name without
+    nameservers can still be registered, so where nothing else could be
+    asked the verdict is "likely free" at half. */
 export function verdict(votes: Partial<Record<Source, Vote>>): { state: Availability; sure: number } {
   const said = Object.values(votes).filter((v): v is Vote => v !== undefined && v !== "na");
   if (said.includes("taken")) return { state: "taken", sure: 100 };
@@ -197,6 +202,7 @@ export function verdict(votes: Partial<Record<Source, Vote>>): { state: Availabi
   const free = said.filter((v) => v === "free" || v === "premium").length;
   const sure = Math.round((100 * free) / said.length);
   if (!free) return { state: "unknown", sure: 0 };
+  if (Object.entries(votes).every(([s, v]) => v === undefined || v === "na" || s === "dns" || s === "dns2")) return { state: "maybe", sure: 50 };
   return { state: sure === 100 ? "available" : "maybe", sure };
 }
 
@@ -212,6 +218,8 @@ export function explain(votes: Partial<Record<Source, Vote>>): string {
   if (free.length) parts.push(`${free.join(", ")}: free`);
   if (premium.length) parts.push(`${premium.join(", ")}: free at a premium price`);
   if (silent.length) parts.push(`${silent.join(", ")}: no answer`);
+  const asked = Object.entries(votes).filter(([, v]) => v && v !== "na").map(([s]) => s);
+  if (asked.length && asked.every((s) => s === "dns" || s === "dns2")) parts.push("no registry or registrar to ask");
   return parts.join(" · ");
 }
 

@@ -23,7 +23,7 @@ if (existsSync(pub)) cpSync(pub, dist(), { recursive: true });
 // and a price for one of those is not a price for a domain. A price of
 // zero is Porkbun's placeholder for an extension it cannot sell yet.
 const json = (f) => JSON.parse(readFileSync(data(f), "utf8"));
-const porkbun = json("porkbun.json"), godaddy = json("godaddy.json"), dynadot = json("dynadot.json"), rdap = json("rdap.json"), extra = json("rdap-extra.json");
+const porkbun = json("porkbun.json"), godaddy = json("godaddy.json"), dynadot = json("dynadot.json"), rdap = json("rdap.json"), extra = json("rdap-extra.json"), marcaria = json("marcaria.json");
 const countries = json("countries.json");
 const iana = new Set(json("iana.json").tlds);
 const real = (tld) => iana.has(tld.split(".").pop());
@@ -37,16 +37,24 @@ const rdapFor = (tld) => {
   return null;
 };
 const tlds = {};
-for (const [tld, price] of Object.entries(porkbun.tlds)) if (real(tld) && sold(price)) tlds[tld] = { pb: price, gd: null, dd: null, rdap: rdapFor(tld) };
+for (const [tld, price] of Object.entries(porkbun.tlds)) if (real(tld) && sold(price)) tlds[tld] = { pb: price, gd: null, dd: null, mc: null, rdap: rdapFor(tld) };
 let gdAsOf = "";
 for (const [tld, v] of Object.entries(godaddy.tlds)) {
   if (!sold(v.price) || !real(tld)) continue;
-  (tlds[tld] ??= { pb: null, gd: null, dd: null, rdap: rdapFor(tld) }).gd = v.price;
+  (tlds[tld] ??= { pb: null, gd: null, dd: null, mc: null, rdap: rdapFor(tld) }).gd = v.price;
   if (v.asOf > gdAsOf) gdAsOf = v.asOf;
 }
 for (const [tld, price] of Object.entries(dynadot.tlds)) {
   if (!sold(price) || !real(tld)) continue;
-  (tlds[tld] ??= { pb: null, gd: null, dd: null, rdap: rdapFor(tld) }).dd = price;
+  (tlds[tld] ??= { pb: null, gd: null, dd: null, mc: null, rdap: rdapFor(tld) }).dd = price;
+}
+// Marcaria sells the country-code extensions the other three do not, from
+// .com.br to .co.jp, at a price per year read off its site by hand
+// (tools/marcaria.mjs). Where another registrar sells the extension too,
+// Marcaria is the dearer offer, kept so the reader sees it is one.
+for (const [tld, price] of Object.entries(marcaria.tlds)) {
+  if (!sold(price) || !real(tld)) continue;
+  (tlds[tld] ??= { pb: null, gd: null, dd: null, mc: null, rdap: rdapFor(tld) }).mc = price;
 }
 // A country-code extension, and every second-level zone under one, carries
 // its country; the page's country filter and its row labels read it here.
@@ -57,12 +65,12 @@ for (const [tld, ext] of Object.entries(tlds)) {
   ext.cc = cc;
   named[cc] = countries.names[cc];
 }
-const tables = { asOf: { porkbun: porkbun.asOf, godaddy: gdAsOf, dynadot: dynadot.asOf, rdap: rdap.publication }, countries: named, tlds };
+const tables = { asOf: { porkbun: porkbun.asOf, godaddy: gdAsOf, dynadot: dynadot.asOf, marcaria: marcaria.asOf, rdap: rdap.publication }, countries: named, tlds };
 writeFileSync(dist("data.json"), JSON.stringify(tables));
 const count = Object.keys(tlds).length;
 const hundreds = `${Math.floor(count / 100) * 100}+`;
 const day = (iso) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
-const dated = { Porkbun: porkbun.asOf, GoDaddy: gdAsOf, Dynadot: dynadot.asOf };
+const dated = { Porkbun: porkbun.asOf, GoDaddy: gdAsOf, Dynadot: dynadot.asOf, Marcaria: marcaria.asOf };
 const asOf = new Set(Object.values(dated)).size === 1
   ? day(porkbun.asOf)
   : Object.entries(dated).map(([who, d]) => `${day(d)} (${who})`).join(", ").replace(/, ([^,]*)$/, " and $1");
@@ -102,14 +110,14 @@ const card = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
   <rect width="1200" height="630" fill="${DARK}"/>
   <text x="80" y="250" font-family="Helvetica, Arial, sans-serif" font-size="84" font-weight="800" fill="#E6F0EE">Domain name search</text>
   <text x="80" y="340" font-family="Helvetica, Arial, sans-serif" font-size="40" fill="#2DD4BF">${hundreds} extensions · cheapest first</text>
-  <text x="80" y="420" font-family="Helvetica, Arial, sans-serif" font-size="32" fill="#94A8A4">Porkbun, GoDaddy and Dynadot prices, first year and renewal</text>
+  <text x="80" y="420" font-family="Helvetica, Arial, sans-serif" font-size="32" fill="#94A8A4">Porkbun, GoDaddy, Dynadot and Marcaria prices, first year and renewal</text>
 </svg>`;
 await sharp(Buffer.from(card)).png().toFile(dist("share.png").pathname);
 
 writeFileSync(dist("manifest.webmanifest"), JSON.stringify({
   name: "dmnr — domain name search",
   short_name: "dmnr",
-  description: `Domain name search across ${hundreds} extensions, cheapest first, with Porkbun's, GoDaddy's and Dynadot's prices.`,
+  description: `Domain name search across ${hundreds} extensions, cheapest first, with Porkbun's, GoDaddy's, Dynadot's and Marcaria's prices.`,
   start_url: "./",
   scope: "./",
   display: "standalone",
@@ -126,6 +134,7 @@ writeFileSync(dist("manifest.webmanifest"), JSON.stringify({
 writeFileSync(dist("index.html"), readFileSync(src("index.html"), "utf8")
   .replaceAll("__VERSION__", version)
   .replaceAll("__COUNT__", hundreds)
+  .replaceAll("__COUNTRIES__", `${Math.floor(Object.keys(named).length / 10) * 10}+`)
   .replaceAll("__ASOF__", asOf));
 
 // The page is dated by the last commit that changed what it shows (src/ and

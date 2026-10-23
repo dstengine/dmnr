@@ -1,5 +1,5 @@
 {
- "asOf": "2026-10-21",
+ "asOf": "2026-10-23",
  "note": "RDAP servers the IANA bootstrap (data.iana.org/rdap/dns.json) does not list. Each was checked by hand: nic.<tld> answers 200 and a random label 404. The bootstrap wins where it has an entry; the prices.mjs rdap job never touches this file.",
  "tlds": {
   "io": "https://rdap.identitydigital.services/rdap/",
@@ -18,6 +18,10 @@
   "us": "https://rdap.nic.us/",
   "ws": "https://rdap.website.ws/",
   "com.de": "https://rdap.centralnic.com/com.de/",
-  "com.se": "https://rdap.centralnic.com/com.se/"
+  "com.se": "https://rdap.centralnic.com/com.se/",
+  "kn": "https://rdap.nic.kn/",
+  "td": "https://rdap.nic.td/",
+  "ga": "https://rdap.nic.ga/",
+  "aw": "https://rdap.nic.aw/"
  }
 }

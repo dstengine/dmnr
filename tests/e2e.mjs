@@ -27,9 +27,11 @@ for (const scheme of ["light", "dark"]) {
   page.on("pageerror", (e) => errors.push(e.message));
   // A 404 from a registry is "no such domain", the answer wanted; a 403 or
   // 429 is a registry's rate limit, which the page answers with "ask the
-  // registrar"; a CORS refusal is what api/check is there for. Chromium
-  // logs all of them as errors.
-  const expected = /status of (?:404|403|429)|CORS policy|net::ERR_FAILED/;
+  // registrar"; a CORS refusal is what api/check is there for; a registry
+  // that closes or resets the connection under the suite's load has not
+  // answered either, and the page says so the same way. Chromium logs all
+  // of them as errors.
+  const expected = /status of (?:404|403|429)|CORS policy|net::ERR_FAILED|net::ERR_CONNECTION_(?:CLOSED|RESET)|net::ERR_TIMED_OUT/;
   page.on("console", (m) => m.type() === "error" && !expected.test(m.text()) && errors.push(m.text()));
   page.on("request", (r) => !r.url().startsWith(BASE) && foreign.add(new URL(r.url()).host));
 
@@ -86,6 +88,18 @@ for (const scheme of ["light", "dark"]) {
   assert.match(await page.evaluate(() => location.search), /cc=GB/, "the address does not carry the country");
   assert.match(await page.$eval("[data-status]", (e) => e.textContent), /in United Kingdom/, "the status does not count the country's rows");
   assert.equal(await page.$eval("[data-more]", (e) => e.hidden), true, "more rows offered than the country has");
+  await page.selectOption("[data-country]", "");
+  await page.waitForFunction(() => document.querySelectorAll(".row").length === 60);
+
+  // A country only Marcaria sells: Brazil's zones are priced by it alone,
+  // and with no registry or registrar to ask, a free name is likely free.
+  await page.selectOption("[data-country]", "BR");
+  await page.waitForFunction(() => document.querySelectorAll(".row").length > 0 && document.querySelectorAll(".row").length < 20);
+  const brRows = await page.$$eval(".row", (rows) => rows.map((r) => r.querySelector(".dom b").textContent));
+  assert.ok(brRows.length >= 3 && brRows.every((t) => /\.br$/.test(t)), `Brazil shows ${brRows.join(" ")}`);
+  assert.ok(await page.$$eval(".row .offer .who", (w) => w.some((e) => e.textContent === "Marcaria")), "no Marcaria offer on Brazil's rows");
+  await page.waitForFunction(() => [...document.querySelectorAll(".row")].every((r) => !/idle|checking/.test(r.dataset.state)), null, { timeout: 60_000 });
+  assert.ok(await page.$$eval(".row", (rows) => rows.every((r) => /taken|maybe|reserved|unknown/.test(r.dataset.state))), "a Brazilian row is 'available' with no source but DNS");
   await page.selectOption("[data-country]", "");
   await page.waitForFunction(() => document.querySelectorAll(".row").length === 60);
 
