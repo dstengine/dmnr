@@ -1,0 +1,79 @@
+# Refreshes the price tables on a schedule and commits them, so the page
+# stops depending on someone remembering to run tools/prices.mjs. A push
+# to main deploys the site, so a run that changes a table is a deploy.
+#
+# Weekly: Porkbun, Dynadot, the RDAP bootstrap and the IANA root zone, all
+# read with no key. Monthly: GoDaddy too, read with GODADDY_API_KEY from
+# the repository secrets at one check a second (about ten minutes).
+# Marcaria's table is read by hand (tools/marcaria.mjs) and cannot be
+# refreshed here; the run warns once it is three months old.
+#
+# Nothing is committed unless the build and the tests pass on the new
+# tables, and the date on the page (src/updated.txt, which the build takes
+# from git) is the date of the commit that carries them.
+name: prices
+on:
+  schedule:
+    - cron: "17 6 * * 1"   # Mondays 06:17 UTC: porkbun, dynadot, rdap, iana
+    - cron: "17 7 1 * *"   # the 1st, 07:17 UTC: godaddy as well
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: "space-separated sources: porkbun dynadot rdap iana godaddy"
+        default: "porkbun dynadot rdap iana"
+permissions:
+  contents: write
+concurrency: prices
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the build dates the page by git log
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Choose the sources
+        id: pick
+        env:
+          ASKED: ${{ inputs.jobs }}
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then jobs="$ASKED"
+          elif [ "$SCHEDULE" = "17 7 1 * *" ]; then jobs="porkbun dynadot rdap iana godaddy"
+          else jobs="porkbun dynadot rdap iana"; fi
+          echo "jobs=$jobs" >> "$GITHUB_OUTPUT"
+          echo "sources: $jobs"
+      - name: Refresh the tables
+        env:
+          GODADDY_API_KEY: ${{ secrets.GODADDY_API_KEY }}
+        run: |
+          for j in ${{ steps.pick.outputs.jobs }}; do node tools/prices.mjs "$j"; done
+      - name: Build and test on the new tables
+        run: |
+          npm run build
+          npm test
+      - name: Marcaria's age
+        run: |
+          asof=$(node -p 'JSON.parse(require("fs").readFileSync("data/marcaria.json")).asOf')
+          age=$(( ( $(date +%s) - $(date -d "$asof" +%s) ) / 86400 ))
+          echo "marcaria.json is $age days old (as of $asof)"
+          if [ "$age" -gt 90 ]; then echo "::warning title=Marcaria's prices are $age days old::Re-read its price pages by hand; tools/marcaria.mjs says how."; fi
+      - name: Commit what changed
+        run: |
+          git add data/
+          if git diff --cached --quiet; then echo "nothing moved"; exit 0; fi
+          git config user.name "prices"
+          git config user.email "prices@users.noreply.github.com"
+          changed=$(git diff --cached --name-only data/ | sed 's#data/##; s#\.json##' | paste -sd, - | sed 's/,/, /g')
+          git commit -q -m "Prices refreshed: $changed ($(date -u +%F))"
+          npm run build --silent          # dates src/updated.txt by the commit above
+          git add src/updated.txt
+          git commit -q --amend --no-edit
+          git push
+          echo "pushed: $changed"

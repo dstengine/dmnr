@@ -42,9 +42,11 @@ async function porkbun() {
 }
 
 async function godaddy() {
-  const env = readFileSync(new URL("../../.env", import.meta.url), "utf8");
-  const key = env.match(/^GODADDY_API_KEY=(.+)$/m)?.[1]?.trim().replace(/^["']|["']$/g, "");
-  if (!key) throw new Error("no GODADDY_API_KEY in ~/dst/.env");
+  // The key comes from the environment (the Action's secret) or ~/dst/.env.
+  const envFile = new URL("../../.env", import.meta.url);
+  const env = existsSync(envFile) ? readFileSync(envFile, "utf8") : "";
+  const key = process.env.GODADDY_API_KEY || env.match(/^GODADDY_API_KEY=(.+)$/m)?.[1]?.trim().replace(/^["']|["']$/g, "");
+  if (!key) throw new Error("no GODADDY_API_KEY in the environment or ~/dst/.env");
   const H = { authorization: `Bearer ${key}`, accept: "application/json" };
   const out = existsSync(data("godaddy.json")) ? JSON.parse(readFileSync(data("godaddy.json"), "utf8")) : { tlds: {} };
   out.currency = "USD";

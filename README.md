@@ -14,7 +14,11 @@ kept to one country's extensions, and every country-code row names its country.
   `countries.json`, the country of every country-code extension. `node tools/prices.mjs`
   refreshes the prices and the lists (one source as an argument: `porkbun`, `dynadot`,
   `godaddy`, `rdap`, `iana`); the GoDaddy pass takes ten minutes at its rate limit and needs
-  `GODADDY_API_KEY` in `../.env`. `node tools/countries.mjs` rewrites the country
+  `GODADDY_API_KEY` in the environment or in `../.env`. The same runs on a schedule:
+  `.github/workflows/prices.yml` reads the keyless sources every Monday and GoDaddy
+  on the first of the month (the key as the repository secret `GODADDY_API_KEY`),
+  builds, tests, and commits what moved to `main`, which deploys — so pull before
+  you push. `node tools/countries.mjs` rewrites the country
   table from the root-zone list: ISO codes named by CLDR, the internationalised
   country-code extensions by hand. `node tools/marcaria.mjs` rebuilds Marcaria's
   table from `data/marcaria-countries.txt` and `data/marcaria-gtlds.txt`, two lists
