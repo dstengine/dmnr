@@ -1,6 +1,6 @@
 {
- "asOf": "2026-10-20",
- "version": "Version 2026102000, Last Updated Tue Oct 20 07:07:01 2026 UTC",
+ "asOf": "2026-11-01",
+ "version": "Version 2026110100, Last Updated Sun Nov  1 07:07:02 2026 UTC",
  "tlds": [
   "aaa",
   "aarp",
@@ -525,7 +525,6 @@
   "health",
   "healthcare",
   "help",
-  "helsinki",
   "here",
   "hermes",
   "hiphop",

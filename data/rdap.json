@@ -1,6 +1,6 @@
 {
- "asOf": "2026-10-23",
- "publication": "2026-10-22T23:00:04Z",
+ "asOf": "2026-11-01",
+ "publication": "2026-10-28T22:00:04Z",
  "tlds": {
   "kg": "http://rdap.cctld.kg/",
   "mg": "http://rdap.nic.mg/",
@@ -398,7 +398,6 @@
   "hdfc": "https://rdap.identitydigital.services/rdap/",
   "hdfcbank": "https://rdap.identitydigital.services/rdap/",
   "healthcare": "https://rdap.identitydigital.services/rdap/",
-  "helsinki": "https://rdap.identitydigital.services/rdap/",
   "hermes": "https://rdap.identitydigital.services/rdap/",
   "hkt": "https://rdap.identitydigital.services/rdap/",
   "hockey": "https://rdap.identitydigital.services/rdap/",
