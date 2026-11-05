@@ -28,6 +28,10 @@
 //      once per category; the first line is kept.
 //   3. Set the #asOf line in both files, then: node tools/marcaria.mjs
 //
+// One page load per list and per refresh: the snippets read the page that is
+// open, and nothing here fetches Marcaria's pages from a script or on a
+// schedule.
+//
 // Where Marcaria offers a discount, the price-per-year cell holds two
 // figures, "$23 $53" with the second struck through, and a tooltip says
 // the discount is valid only for the first year: the first figure is the

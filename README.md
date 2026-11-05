@@ -132,4 +132,7 @@ Then a job in `tools/prices.mjs` writing `data/<name>.json`
 `REGISTRARS` in `src/app.ts`, the redirect in `vercel.json`, the texts
 in `src/index.html`, and the tests.
 
-MIT licence.
+The code is under the MIT licence (`LICENSE`). The price tables are not: the
+registrars' prices in `data/` (`porkbun.json`, `godaddy.json`, `dynadot.json`,
+`marcaria.json` and `marcaria-*.txt`) are theirs, published here with the date
+they were read, and the licence grants no rights in them.
