@@ -22,9 +22,11 @@ kept to one country's extensions, and every country-code row names its country.
   table from the root-zone list: ISO codes named by CLDR, the internationalised
   country-code extensions by hand. `node tools/marcaria.mjs` rebuilds Marcaria's
   table from `data/marcaria-countries.txt` and `data/marcaria-gtlds.txt`, two lists
-  read off its price pages in a browser (its site answers robots with 403 and it has
-  no API); the tool says how. Marcaria is the dearest of the four but the only one
-  selling most countries' own zones, so it is what makes the country list long.
+  copied from its price pages in a browser (its site refuses scripted requests with
+  403 and it has no public API); the tool says how, and reads a discount as the
+  first year with the struck-through price as the renewal. Marcaria is rarely the
+  cheapest where the others sell too, but it is the only one selling most countries'
+  own zones, so it is what makes the country list long.
 - `api/check.js` — a proxy to the registries' RDAP servers for the ones
   that refuse browsers. `src/refusal.js` reads a registry's reason out of
   its 404, where it gives one: a name the registry withholds is "reserved",
@@ -97,8 +99,8 @@ only votes.
 Not here, and why: Namecheap wants the caller's IP whitelisted; Fastly's
 Domain Research API (the former Domainr) is billed per request; Hostinger
 and IONOS need a hosting account; Cloudflare Registrar, Marcaria and
-Hover publish no API. Marcaria is in the price tables all the same, as a
-list read by hand, because it is the one registrar that sells most
+Hover publish no API. Marcaria is in the price tables all the same, as two
+lists copied in a browser, because it is the one registrar that sells most
 countries' own zones; its availability answers are not here, since there
 is nothing to ask.
 
@@ -109,7 +111,7 @@ A registrar earns a column when all of this holds; one "no" is a no.
 - A price list a script can read with no account and no key, so
   `tools/prices.mjs` can refresh it: JSON, or a page that carries the
   whole table in its markup. A page behind a bot wall cannot be refreshed.
-  Marcaria is the one exception, read by hand through `tools/marcaria.mjs`,
+  Marcaria is the one exception, copied in a browser through `tools/marcaria.mjs`,
   and only because no other registrar prices the countries it does.
 - Both prices per extension, the first year and the renewal, as standard
   rates before sales (or with the sale marked so the standard can be read).
@@ -118,8 +120,10 @@ A registrar earns a column when all of this holds; one "no" is a no.
   empty.
 - A search URL that takes the typed name and lands on its result with no
   login, for `/go/<registrar>/<domain>`.
-- robots.txt and the terms allow reading the price page; the refresh is
-  one fetch by hand, not a crawl.
+- The terms allow showing the prices, or the registrar agrees in writing;
+  robots.txt allows reading the price page; the refresh is one fetch, not a
+  crawl. Dynadot's and Marcaria's terms ask for written permission to show
+  their prices; it is being sought, and a refusal takes the column off.
 - An ICANN-accredited registrar, or the retail brand of one.
 
 Then a job in `tools/prices.mjs` writing `data/<name>.json`

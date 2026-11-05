@@ -1,629 +1,642 @@
 # Marcaria.com registration prices for country-code and generic extensions, US dollars per year,
-# read in a browser from https://www.marcaria.com/register/countrypricesdom.asp?cont=all
-# (tools/marcaria.mjs says how). Columns: extension | country as Marcaria names it | price per year | minimum years.
-#asOf 2026-10-23
+# copied in a browser from https://www.marcaria.com/register/countrypricesdom.asp?cont=all
+# (tools/marcaria.mjs says how). Columns: extension | country as Marcaria names it | first year |
+# renewal | minimum years.
+# Where Marcaria shows a discount, the first year is the discounted price and the renewal the
+# struck-through one ("Discount valid only for the first year"); otherwise the two are the same.
+#asOf 2026-11-06
 #America
-ai|Anguilla|100|2
-com.ai|Anguilla|100|2
-aq|Antarctica|105|2
-ag|Antigua|106|1
-com.ag|Antigua|75|1
-net.ag|Antigua|75|1
-org.ag|Antigua|75|1
-co.ag|Antigua|75|1
-ar|Argentina|96|1
-com.ar|Argentina|76|1
-net.ar|Argentina|76|1
-aw|Aruba|197|1
-bs|Bahamas|307|2
-com.bs|Bahamas|263|2
-bb|Barbados|151|1
-com.bb|Barbados|151|1
-bz|Belize|24|1
-com.bz|Belize|60|1
-net.bz|Belize|60|1
-bm|Bermuda|161|1
-com.bm|Bermuda|161|1
-bo|Bolivia|219|1
-com.bo|Bolivia|94|1
-net.bo|Bolivia|94|1
-org.bo|Bolivia|94|1
-com.br|Brazil|29|1
-tv.br|Brazil|29|1
-net.br|Brazil|29|1
-org.br|Brazil|29|1
-eco.br|Brazil|29|1
-blog.br|Brazil|29|1
-ind.br|Brazil|29|1
-vg|British Virgin Islands (UK)|45|1
-ca|Canada|19|1
-ky|Cayman Island|83|1
-com.ky|Cayman Island|83|1
-cl|Chile|38|1
-co|Colombia|39|1
-com.co|Colombia|29|1
-net.co|Colombia|29|1
-nom.co|Colombia|29|1
-cr|Costa Rica|130|1
-co.cr|Costa Rica|51|1
-cw|Curaçao|247|2
-com.cw|Curaçao|240|2
-net.cw|Curaçao|240|2
-dm|Dominica|214|1
-co.dm|Dominica|214|1
-do|Dominican Republic|80|1
-com.do|Dominican Republic|61|1
-org.do|Dominican Republic|60|1
-web.do|Dominican Republic|60|1
-ec|Ecuador|77|1
-com.ec|Ecuador|77|1
-net.ec|Ecuador|77|1
-info.ec|Ecuador|77|1
-sv|El Salvador|118|1
-com.sv|El Salvador|88|1
-co.fk|Falkland Islands|146|1
-gf|French Guiana|188|1
-gd|Grenada|36|1
-gp|Guadalupe|156|1
-com.gp|Guadalupe|146|1
-gt|Guatemala|94|1
-com.gt|Guatemala|79|1
-gy|Guyana|41|1
-com.gy|Guyana|41|1
-net.gy|Guyana|41|1
-co.gy|Guyana|41|1
-ht|Haiti|107|1
-com.ht|Haiti|73|1
-net.ht|Haiti|73|1
-hn|Honduras|89|1
-com.hn|Honduras|89|1
-net.hn|Honduras|89|1
-com.jm|Jamaica|79|1
-mq|Martinique|209|1
-mx|Mexico|49|1
-com.mx|Mexico|28|1
-net.mx|Mexico|28|1
-org.mx|Mexico|28|1
-ms|Montserrat|72|1
-co.ms|Montserrat|72|1
-com.ms|Montserrat|72|1
-org.ms|Montserrat|72|1
-ni|Nicaragua|741|1
-com.ni|Nicaragua|104|1
-info.ni|Nicaragua|101|1
-co.ni|Nicaragua|104|1
-web.ni|Nicaragua|101|1
-pa|Panama|164|2
-com.pa|Panama|50|2
-com.py|Paraguay|144|1
-edu.py|Paraguay|144|1
-net.py|Paraguay|144|1
-pe|Peru|54|1
-com.pe|Peru|54|1
-net.pe|Peru|54|1
-org.pe|Peru|54|1
-pr|Puerto Rico|1364|1
-com.pr|Puerto Rico|188|1
-net.pr|Puerto Rico|188|1
-org.pr|Puerto Rico|188|1
-isla.pr|Puerto Rico|41|1
-biz.pr|Puerto Rico|190|1
-info.pr|Puerto Rico|190|1
-gs|S. Georgia S. Sandwich Islands|69|1
-pm|Saint Pierre and Miquelon|14|1
-vc|Saint Vincent and the Grenadines|52|1
-com.vc|Saint Vincent and the Grenadines|52|1
-sx|Sint Maarten|33|1
-kn|St. Kitts and Nevis|240|1
-com.kn|St. Kitts and Nevis|240|1
-lc|St. Lucia|34|1
-com.lc|St. Lucia|25|1
-net.lc|St. Lucia|25|1
-co.lc|St. Lucia|25|1
-p.lc|St. Lucia|25|1
-l.lc|St. Lucia|25|1
-sr|Suriname|129|1
-tt|Trinidad and Tobago|498|3
-com.tt|Trinidad and Tobago|56|3
-co.tt|Trinidad and Tobago|56|3
-tc|Turks and Caicos|129|1
-com.tc|Turks and Caicos|35|1
-uy|Uruguay|59|1
-com.uy|Uruguay|59|1
-net.uy|Uruguay|79|1
-org.uy|Uruguay|79|1
-vi|US Virgin Island|386|1
-com.vi|US Virgin Island|298|1
-co.vi|US Virgin Island|298|1
-us|USA|15|1
+ai|Anguilla|100|100|2
+com.ai|Anguilla|100|100|2
+aq|Antarctica|105|105|2
+ag|Antigua|106|106|1
+com.ag|Antigua|75|75|1
+net.ag|Antigua|75|75|1
+org.ag|Antigua|75|75|1
+co.ag|Antigua|75|75|1
+ar|Argentina|96|96|1
+com.ar|Argentina|76|76|1
+net.ar|Argentina|76|76|1
+aw|Aruba|197|197|1
+bs|Bahamas|307|307|2
+com.bs|Bahamas|263|263|2
+bb|Barbados|151|151|1
+com.bb|Barbados|151|151|1
+bz|Belize|24|24|1
+com.bz|Belize|60|60|1
+net.bz|Belize|60|60|1
+bm|Bermuda|161|161|1
+com.bm|Bermuda|161|161|1
+bo|Bolivia|219|219|1
+com.bo|Bolivia|94|94|1
+net.bo|Bolivia|94|94|1
+org.bo|Bolivia|94|94|1
+com.br|Brazil|29|29|1
+tv.br|Brazil|29|29|1
+net.br|Brazil|29|29|1
+org.br|Brazil|29|29|1
+eco.br|Brazil|29|29|1
+blog.br|Brazil|29|29|1
+ind.br|Brazil|29|29|1
+vg|British Virgin Islands (UK)|45|45|1
+ca|Canada|19|19|1
+ky|Cayman Island|83|83|1
+com.ky|Cayman Island|83|83|1
+cl|Chile|38|38|1
+co|Colombia|39|39|1
+com.co|Colombia|29|29|1
+net.co|Colombia|29|29|1
+nom.co|Colombia|29|29|1
+cr|Costa Rica|130|130|1
+co.cr|Costa Rica|51|51|1
+cw|Curaçao|247|247|2
+com.cw|Curaçao|240|240|2
+net.cw|Curaçao|240|240|2
+dm|Dominica|214|214|1
+co.dm|Dominica|214|214|1
+do|Dominican Republic|80|80|1
+com.do|Dominican Republic|61|61|1
+org.do|Dominican Republic|60|60|1
+web.do|Dominican Republic|60|60|1
+ec|Ecuador|77|77|1
+com.ec|Ecuador|77|77|1
+net.ec|Ecuador|77|77|1
+info.ec|Ecuador|77|77|1
+sv|El Salvador|118|118|1
+com.sv|El Salvador|88|88|1
+co.fk|Falkland Islands|146|146|1
+gf|French Guiana|188|188|1
+gd|Grenada|36|36|1
+gp|Guadalupe|156|156|1
+com.gp|Guadalupe|146|146|1
+gt|Guatemala|94|94|1
+com.gt|Guatemala|79|79|1
+gy|Guyana|41|41|1
+com.gy|Guyana|41|41|1
+net.gy|Guyana|41|41|1
+co.gy|Guyana|41|41|1
+ht|Haiti|107|107|1
+com.ht|Haiti|73|73|1
+net.ht|Haiti|73|73|1
+hn|Honduras|89|89|1
+com.hn|Honduras|89|89|1
+net.hn|Honduras|89|89|1
+com.jm|Jamaica|79|79|1
+mq|Martinique|209|209|1
+mx|Mexico|49|49|1
+com.mx|Mexico|28|28|1
+net.mx|Mexico|28|28|1
+org.mx|Mexico|28|28|1
+ms|Montserrat|72|72|1
+co.ms|Montserrat|72|72|1
+com.ms|Montserrat|72|72|1
+org.ms|Montserrat|72|72|1
+ni|Nicaragua|741|741|1
+com.ni|Nicaragua|104|104|1
+info.ni|Nicaragua|101|101|1
+co.ni|Nicaragua|104|104|1
+web.ni|Nicaragua|101|101|1
+pa|Panama|164|164|2
+com.pa|Panama|50|50|2
+com.py|Paraguay|144|144|1
+edu.py|Paraguay|144|144|1
+net.py|Paraguay|144|144|1
+pe|Peru|54|54|1
+com.pe|Peru|54|54|1
+net.pe|Peru|54|54|1
+org.pe|Peru|54|54|1
+pr|Puerto Rico|1364|1364|1
+com.pr|Puerto Rico|188|188|1
+net.pr|Puerto Rico|188|188|1
+org.pr|Puerto Rico|188|188|1
+isla.pr|Puerto Rico|41|41|1
+biz.pr|Puerto Rico|190|190|1
+info.pr|Puerto Rico|190|190|1
+gs|S. Georgia S. Sandwich Islands|69|69|1
+pm|Saint Pierre and Miquelon|17|17|1
+vc|Saint Vincent and the Grenadines|52|52|1
+com.vc|Saint Vincent and the Grenadines|52|52|1
+sx|Sint Maarten|33|33|1
+kn|St. Kitts and Nevis|240|240|1
+com.kn|St. Kitts and Nevis|240|240|1
+lc|St. Lucia|34|34|1
+com.lc|St. Lucia|25|25|1
+net.lc|St. Lucia|25|25|1
+co.lc|St. Lucia|25|25|1
+p.lc|St. Lucia|25|25|1
+l.lc|St. Lucia|25|25|1
+sr|Suriname|129|129|1
+tt|Trinidad and Tobago|498|498|3
+com.tt|Trinidad and Tobago|56|56|3
+co.tt|Trinidad and Tobago|56|56|3
+tc|Turks and Caicos|129|129|1
+com.tc|Turks and Caicos|35|35|1
+uy|Uruguay|59|59|1
+com.uy|Uruguay|59|59|1
+net.uy|Uruguay|79|79|1
+org.uy|Uruguay|79|79|1
+vi|US Virgin Island|386|386|1
+com.vi|US Virgin Island|298|298|1
+co.vi|US Virgin Island|298|298|1
+us|USA|15|15|1
 #Europe
-ax|Aland Islands|131|1
-al|Albania|58|1
-com.al|Albania|58|1
-net.al|Albania|58|1
-org.al|Albania|58|1
-ad|Andorra|34|1
-at|Austria|27|1
-co.at|Austria|27|1
-be|Belgium|15|1
-ba|Bosnia|100|1
-bg|Bulgaria|85|1
-hr|Croatia|167|1
-com.hr|Croatia|39|1
-cy|Cyprus|126|1
-com.cy|Cyprus|126|1
-net.cy|Cyprus|126|1
-org.cy|Cyprus|126|1
-biz.cy|Cyprus|126|1
-cz|Czech Republic|39|1
-co.cz|Czech Republic|42|1
-dk|Denmark|32|1
-co.dk|Denmark|55|1
-biz.dk|Denmark|55|1
-ee|Estonia|49|1
-com.ee|Estonia|49|1
-co.ee|Estonia|49|1
-eu|European Union|9|1
-fo|Faroe Islands|125|1
-fi|Finland|59|1
-fr|France|17|1
-tf|French Southern and Antarctic Lands|14|1
-de|Germany|7|1
-com.de|Germany|19|1
-co.de|Germany|29|1
-gi|Gibraltar|143|2
-com.gi|Gibraltar|143|2
-gr|Greece|19|2
-com.gr|Greece|19|2
-net.gr|Greece|19|2
-org.gr|Greece|19|2
-gl|Greenland|72|1
-com.gl|Greenland|72|1
-co.gl|Greenland|72|1
-gg|Guernsey|123|1
-co.gg|Guernsey|78|1
-hu|Hungary|16|1
-co.hu|Hungary|29|1
-info.hu|Hungary|29|1
-is|Iceland|99|1
-ie|Ireland|31|1
-im|Isle of Man|20|1
-net.im|Isle of Man|20|1
-co.im|Isle of Man|20|1
-it|Italy|15|1
-co.it|Italy|15|1
-bz.it|Italy|15|1
-je|Jersey|123|1
-co.je|Jersey|94|1
-lv|Latvia|47|1
-com.lv|Latvia|47|1
-li|Liechtenstein|17|1
-lt|Lithuania|27|1
-lu|Luxembourg|29|1
-mk|Macedonia|69|1
-com.mk|Macedonia|69|1
-mt|Malta|75|1
-com.mt|Malta|75|1
-md|Moldova|184|1
-mc|Monaco|58|1
-me|Montenegro|19|1
-nl|Netherlands|19|1
-com.nl|Netherlands|15|1
-net.nl|Netherlands|15|1
-co.nl|Netherlands|15|1
-no|Norway|49|1
-co.no|Norway|50|1
-pl|Poland|32|1
-com.pl|Poland|32|1
-net.pl|Poland|32|1
-org.pl|Poland|32|1
-biz.pl|Poland|32|1
-info.pl|Poland|32|1
-pt|Portugal|29|1
-com.pt|Portugal|29|1
-co.pt|Portugal|36|1
-lda.pt|Portugal|36|1
-ro|Romania|45|1
-com.ro|Romania|45|1
-co.ro|Romania|69|1
-or.ro|Romania|69|1
-sa.ro|Romania|69|1
-ne.ro|Romania|69|1
-srl.ro|Romania|69|1
-sh|Saint Helena|49|1
-sm|San Marino|178|1
-rs|Serbia|83|1
-co.rs|Serbia|50|1
-in.rs|Serbia|40|1
-sk|Slovakia|38|1
-si|Slovenia|73|1
-es|Spain|14|1
-com.es|Spain|14|1
-org.es|Spain|14|1
-nom.es|Spain|14|1
-se|Sweden|55|1
-com.se|Sweden|39|1
-ch|Switzerland|16|1
-ua|Ukraine|91|1
-co.ua|Ukraine|17|1
-com.ua|Ukraine|18|1
-net.ua|Ukraine|18|1
-org.ua|Ukraine|18|1
-in.ua|Ukraine|17|1
-biz.ua|Ukraine|17|1
-kiev.ua|Ukraine|17|1
-kyiv.ua|Ukraine|12|1
-dp.ua|Ukraine|20|1
-uk|United Kingdom|12|1
-co.uk|United Kingdom|12|1
-org.uk|United Kingdom|15|1
-net.uk|United Kingdom|15|1
-me.uk|United Kingdom|15|1
+ax|Aland Islands|131|131|1
+al|Albania|58|58|1
+com.al|Albania|58|58|1
+net.al|Albania|58|58|1
+org.al|Albania|58|58|1
+ad|Andorra|34|34|1
+at|Austria|27|27|1
+co.at|Austria|27|27|1
+be|Belgium|15|15|1
+ba|Bosnia|100|100|1
+bg|Bulgaria|85|85|1
+hr|Croatia|167|167|1
+com.hr|Croatia|39|39|1
+cy|Cyprus|126|126|1
+com.cy|Cyprus|126|126|1
+net.cy|Cyprus|126|126|1
+org.cy|Cyprus|126|126|1
+biz.cy|Cyprus|126|126|1
+cz|Czech Republic|39|39|1
+co.cz|Czech Republic|42|42|1
+dk|Denmark|32|32|1
+co.dk|Denmark|55|55|1
+biz.dk|Denmark|55|55|1
+ee|Estonia|49|49|1
+com.ee|Estonia|49|49|1
+co.ee|Estonia|49|49|1
+eu|European Union|9|11|1
+fo|Faroe Islands|125|125|1
+fi|Finland|59|59|1
+fr|France|17|17|1
+tf|French Southern and Antarctic Lands|17|17|1
+de|Germany|7|7|1
+com.de|Germany|19|19|1
+co.de|Germany|29|29|1
+gi|Gibraltar|143|143|2
+com.gi|Gibraltar|143|143|2
+gr|Greece|19|19|2
+com.gr|Greece|19|19|2
+net.gr|Greece|19|19|2
+org.gr|Greece|19|19|2
+gl|Greenland|72|72|1
+com.gl|Greenland|72|72|1
+co.gl|Greenland|72|72|1
+gg|Guernsey|123|123|1
+co.gg|Guernsey|78|78|1
+hu|Hungary|16|16|1
+co.hu|Hungary|29|29|1
+info.hu|Hungary|29|29|1
+is|Iceland|99|99|1
+ie|Ireland|31|31|1
+im|Isle of Man|20|20|1
+net.im|Isle of Man|20|20|1
+co.im|Isle of Man|20|20|1
+it|Italy|15|15|1
+co.it|Italy|15|15|1
+bz.it|Italy|15|15|1
+je|Jersey|123|123|1
+co.je|Jersey|94|94|1
+lv|Latvia|47|47|1
+com.lv|Latvia|47|47|1
+li|Liechtenstein|17|17|1
+lt|Lithuania|27|27|1
+lu|Luxembourg|29|29|1
+mk|Macedonia|69|69|1
+com.mk|Macedonia|69|69|1
+mt|Malta|75|75|1
+com.mt|Malta|75|75|1
+md|Moldova|184|184|1
+mc|Monaco|58|58|1
+me|Montenegro|19|19|1
+nl|Netherlands|19|19|1
+com.nl|Netherlands|15|15|1
+net.nl|Netherlands|15|15|1
+co.nl|Netherlands|15|15|1
+no|Norway|49|49|1
+co.no|Norway|50|50|1
+pl|Poland|32|32|1
+com.pl|Poland|32|32|1
+net.pl|Poland|32|32|1
+org.pl|Poland|32|32|1
+biz.pl|Poland|32|32|1
+info.pl|Poland|32|32|1
+pt|Portugal|29|29|1
+com.pt|Portugal|29|29|1
+co.pt|Portugal|36|36|1
+lda.pt|Portugal|36|36|1
+ro|Romania|45|45|1
+com.ro|Romania|45|45|1
+co.ro|Romania|69|69|1
+or.ro|Romania|69|69|1
+sa.ro|Romania|69|69|1
+ne.ro|Romania|69|69|1
+srl.ro|Romania|69|69|1
+sh|Saint Helena|49|69|1
+sm|San Marino|178|178|1
+rs|Serbia|83|83|1
+co.rs|Serbia|50|50|1
+in.rs|Serbia|40|40|1
+sk|Slovakia|38|38|1
+si|Slovenia|73|73|1
+es|Spain|14|14|1
+com.es|Spain|14|14|1
+org.es|Spain|14|14|1
+nom.es|Spain|14|14|1
+se|Sweden|55|55|1
+com.se|Sweden|39|39|1
+ch|Switzerland|16|16|1
+ua|Ukraine|91|91|1
+co.ua|Ukraine|17|17|1
+com.ua|Ukraine|18|18|1
+net.ua|Ukraine|18|18|1
+org.ua|Ukraine|18|18|1
+in.ua|Ukraine|17|17|1
+biz.ua|Ukraine|17|17|1
+kiev.ua|Ukraine|17|17|1
+kyiv.ua|Ukraine|12|12|1
+dp.ua|Ukraine|20|20|1
+uk|United Kingdom|12|12|1
+co.uk|United Kingdom|12|12|1
+org.uk|United Kingdom|15|15|1
+net.uk|United Kingdom|15|15|1
+me.uk|United Kingdom|15|15|1
 #Africa
-africa|Africa|26|1
-africa.com|Africa|89|1
-dz|Algeria|96|1
-com.dz|Algeria|96|1
-tm.dz|Algeria|96|1
-ao|Angola|349|1
-co.ao|Angola|349|1
-it.ao|Angola|349|1
-ac|Ascension Island|49|1
-bj|Benin|29|1
-com.bj|Benin|29|1
-org.bj|Benin|29|1
-co.bw|Botswana|63|1
-bf|Burkina Faso|239|1
-bi|Burundi|75|1
-com.bi|Burundi|72|1
-co.bi|Burundi|72|1
-or.bi|Burundi|72|1
-org.bi|Burundi|72|1
-info.bi|Burundi|72|1
-cm|Cameroon|104|1
-com.cm|Cameroon|20|1
-net.cm|Cameroon|20|1
-co.cm|Cameroon|20|1
-cv|Cape Verde|68|1
-com.cv|Cape Verde|68|1
-org.cv|Cape Verde|68|1
-td|Chad|295|1
-com.td|Chad|295|1
-cg|Congo Republic|472|1
-dj|Djibouti|94|1
-eg|Egypt|238|1
-com.eg|Egypt|99|1
-et|Ethiopia|180|1
-com.et|Ethiopia|154|1
-net.et|Ethiopia|154|1
-org.et|Ethiopia|154|1
-ga|Gabon|29|1
-gm|Gambia|78|1
-com.gh|Ghana|186|1
-gw|Guinea-Bissau|60|2
-ci|Ivory Coast|95|1
-com.ci|Ivory Coast|160|1
-net.ci|Ivory Coast|160|1
-co.ci|Ivory Coast|160|1
-org.ci|Ivory Coast|160|1
-ke|Kenya|125|1
-co.ke|Kenya|69|1
-info.ke|Kenya|69|1
-or.ke|Kenya|69|1
-ne.ke|Kenya|69|1
-me.ke|Kenya|69|1
-mobi.ke|Kenya|69|1
-co.ls|Lesotho|178|1
-ls|Lesotho|199|1
-org.ls|Lesotho|178|1
-net.ls|Lesotho|178|1
-com.lr|Liberia|104|1
-mg|Madagascar|203|1
-com.mg|Madagascar|203|1
-net.mg|Madagascar|203|1
-co.mg|Madagascar|203|1
-org.mg|Madagascar|203|1
-mw|Malawi|90|1
-com.mw|Malawi|104|1
-net.mw|Malawi|104|1
-co.mw|Malawi|104|1
-org.mw|Malawi|104|1
-biz.mw|Malawi|87|1
-ml|Mali|29|1
-mr|Mauritania|156|1
-mu|Mauritius|79|1
-com.mu|Mauritius|79|1
-net.mu|Mauritius|79|1
-org.mu|Mauritius|79|1
-co.mu|Mauritius|79|1
-yt|Mayotte|14|1
-ma|Morocco|74|1
-net.ma|Morocco|74|1
-co.ma|Morocco|74|1
-co.mz|Mozambique|115|1
-net.mz|Mozambique|115|1
-org.mz|Mozambique|115|1
-na|Namibia|6850|1
-com.na|Namibia|890|1
-co.na|Namibia|140|1
-org.na|Namibia|930|1
-ne|Niger|448|1
-com.ne|Niger|448|1
-ng|Nigeria|215|1
-com.ng|Nigeria|72|1
-net.ng|Nigeria|72|1
-re|Reunion Island|14|1
-rw|Rwanda|368|1
-co.rw|Rwanda|368|1
-net.rw|Rwanda|368|1
-org.rw|Rwanda|368|1
-st|Saint Tome and Principe|58|1
-sn|Senegal|154|1
-com.sn|Senegal|154|1
-sc|Seychelles|124|1
-com.sc|Seychelles|124|1
-sl|Sierra Leone|83|1
-com.sl|Sierra Leone|83|1
-net.sl|Sierra Leone|83|1
-org.sl|Sierra Leone|83|1
-so|Somalia|69|1
-com.so|Somalia|69|1
-co.za|South Africa|14|1
-net.za|South Africa|14|1
-org.za|South Africa|14|1
-web.za|South Africa|14|1
-com.ss|South Sudan|94|1
-net.ss|South Sudan|94|1
-biz.ss|South Sudan|94|1
-me.ss|South Sudan|73|1
-ss|South Sudan|269|1
-co.ss|South Sudan|149|1
-sd|Sudan|132|1
-com.sd|Sudan|66|1
-net.sd|Sudan|66|1
-info.sd|Sudan|66|1
-tz|Tanzania|96|1
-co.tz|Tanzania|57|1
-tg|Togo|147|1
-tn|Tunisia|38|1
-com.tn|Tunisia|38|1
-ug|Uganda|52|1
-com.ug|Uganda|52|1
-co.ug|Uganda|52|1
-org.ug|Uganda|52|1
-ne.ug|Uganda|52|1
-or.ug|Uganda|52|1
-com.zm|Zambia|109|1
-co.zm|Zambia|109|1
-co.zw|Zimbabwe|141|1
+africa|Africa|26|26|1
+africa.com|Africa|89|89|1
+dz|Algeria|96|96|1
+com.dz|Algeria|96|96|1
+tm.dz|Algeria|96|96|1
+ao|Angola|349|349|1
+co.ao|Angola|349|349|1
+it.ao|Angola|349|349|1
+ac|Ascension Island|49|71|1
+bj|Benin|29|99|1
+com.bj|Benin|29|99|1
+org.bj|Benin|29|99|1
+co.bw|Botswana|63|63|1
+bf|Burkina Faso|239|239|1
+bi|Burundi|75|75|1
+com.bi|Burundi|72|72|1
+co.bi|Burundi|72|72|1
+or.bi|Burundi|72|72|1
+org.bi|Burundi|72|72|1
+info.bi|Burundi|72|72|1
+cm|Cameroon|104|104|1
+com.cm|Cameroon|20|20|1
+net.cm|Cameroon|20|20|1
+co.cm|Cameroon|20|20|1
+cv|Cape Verde|68|68|1
+com.cv|Cape Verde|68|68|1
+org.cv|Cape Verde|68|68|1
+td|Chad|295|295|1
+com.td|Chad|295|295|1
+cg|Congo Republic|472|472|1
+dj|Djibouti|94|94|1
+eg|Egypt|238|238|1
+com.eg|Egypt|99|99|1
+et|Ethiopia|180|180|1
+com.et|Ethiopia|154|154|1
+net.et|Ethiopia|154|154|1
+org.et|Ethiopia|154|154|1
+ga|Gabon|29|29|1
+gm|Gambia|78|78|1
+com.gh|Ghana|186|186|1
+gw|Guinea-Bissau|60|60|2
+ci|Ivory Coast|95|95|1
+com.ci|Ivory Coast|160|160|1
+net.ci|Ivory Coast|160|160|1
+co.ci|Ivory Coast|160|160|1
+org.ci|Ivory Coast|160|160|1
+ke|Kenya|125|125|1
+co.ke|Kenya|69|69|1
+info.ke|Kenya|69|69|1
+or.ke|Kenya|69|69|1
+ne.ke|Kenya|69|69|1
+me.ke|Kenya|69|69|1
+mobi.ke|Kenya|69|69|1
+co.ls|Lesotho|178|178|1
+ls|Lesotho|199|199|1
+org.ls|Lesotho|178|178|1
+net.ls|Lesotho|178|178|1
+com.lr|Liberia|104|104|1
+mg|Madagascar|203|203|1
+com.mg|Madagascar|203|203|1
+net.mg|Madagascar|203|203|1
+co.mg|Madagascar|203|203|1
+org.mg|Madagascar|203|203|1
+mw|Malawi|90|90|1
+com.mw|Malawi|104|104|1
+net.mw|Malawi|104|104|1
+co.mw|Malawi|104|104|1
+org.mw|Malawi|104|104|1
+biz.mw|Malawi|87|87|1
+ml|Mali|29|29|1
+mr|Mauritania|156|156|1
+mu|Mauritius|79|79|1
+com.mu|Mauritius|79|79|1
+net.mu|Mauritius|79|79|1
+org.mu|Mauritius|79|79|1
+co.mu|Mauritius|79|79|1
+yt|Mayotte|17|17|1
+ma|Morocco|74|74|1
+net.ma|Morocco|74|74|1
+co.ma|Morocco|74|74|1
+co.mz|Mozambique|115|115|1
+net.mz|Mozambique|115|115|1
+org.mz|Mozambique|115|115|1
+na|Namibia|6850|6850|1
+com.na|Namibia|890|890|1
+co.na|Namibia|140|140|1
+org.na|Namibia|930|930|1
+ne|Niger|448|448|1
+com.ne|Niger|448|448|1
+ng|Nigeria|215|215|1
+com.ng|Nigeria|72|72|1
+net.ng|Nigeria|72|72|1
+re|Reunion Island|17|17|1
+rw|Rwanda|368|368|1
+co.rw|Rwanda|368|368|1
+net.rw|Rwanda|368|368|1
+org.rw|Rwanda|368|368|1
+st|Saint Tome and Principe|58|58|1
+sn|Senegal|154|154|1
+com.sn|Senegal|154|154|1
+sc|Seychelles|124|124|1
+com.sc|Seychelles|124|124|1
+sl|Sierra Leone|83|83|1
+com.sl|Sierra Leone|83|83|1
+net.sl|Sierra Leone|83|83|1
+org.sl|Sierra Leone|83|83|1
+so|Somalia|69|69|1
+com.so|Somalia|69|69|1
+co.za|South Africa|14|14|1
+net.za|South Africa|14|14|1
+org.za|South Africa|14|14|1
+web.za|South Africa|14|14|1
+com.ss|South Sudan|94|94|1
+net.ss|South Sudan|94|94|1
+biz.ss|South Sudan|94|94|1
+me.ss|South Sudan|73|73|1
+ss|South Sudan|269|269|1
+co.ss|South Sudan|149|149|1
+sd|Sudan|132|132|1
+com.sd|Sudan|66|66|1
+net.sd|Sudan|66|66|1
+info.sd|Sudan|66|66|1
+tz|Tanzania|96|96|1
+co.tz|Tanzania|57|57|1
+tg|Togo|147|147|1
+tn|Tunisia|38|38|1
+com.tn|Tunisia|38|38|1
+ug|Uganda|52|52|1
+com.ug|Uganda|52|52|1
+co.ug|Uganda|52|52|1
+org.ug|Uganda|52|52|1
+ne.ug|Uganda|52|52|1
+or.ug|Uganda|52|52|1
+com.zm|Zambia|109|109|1
+co.zm|Zambia|109|109|1
+co.zw|Zimbabwe|141|141|1
 #Asia
-af|Afghanistan|104|1
-com.af|Afghanistan|74|1
-am|Armenia|79|1
-com.am|Armenia|104|1
-net.am|Armenia|104|1
-org.am|Armenia|104|1
-co.am|Armenia|104|1
-asia|Asia|16|1
-az|Azerbaijan|431|1
-com.az|Azerbaijan|431|1
-net.az|Azerbaijan|422|1
-org.az|Azerbaijan|422|1
-co.az|Azerbaijan|431|1
-biz.az|Azerbaijan|363|1
-info.az|Azerbaijan|363|1
-name.az|Azerbaijan|363|1
-bh|Bahrain|149|1
-com.bh|Bahrain|199|1
-bd|Bangladesh|88|1
-com.bd|Bangladesh|50|2
-net.bd|Bangladesh|50|2
-org.bd|Bangladesh|50|2
-io|British Indian Ocean Territory|59|1
-com.bn|Brunei|240|1
-bn|Brunei|240|1
-cn|China|34|1
-com.cn|China|34|1
-net.cn|China|34|1
-org.cn|China|34|1
-sh.cn|China|34|1
-bj.cn|China|41|1
-tl|East Timor|142|1
-com.tl|East Timor|41|1
-ge|Georgia|62|1
-com.ge|Georgia|42|1
-hk|Hong Kong|30|1
-com.hk|Hong Kong|34|1
-net.hk|Hong Kong|30|1
-in|India|25|1
-co.in|India|25|1
-net.in|India|25|1
-gen.in|India|25|1
-org.in|India|25|1
-id|Indonesia|89|1
-web.id|Indonesia|94|1
-co.id|Indonesia|78|1
-biz.id|Indonesia|94|1
-my.id|Indonesia|94|1
-iq|Iraq|298|1
-com.iq|Iraq|298|1
-co.il|Israel|52|1
-org.il|Israel|62|1
-jp|Japan|48|1
-co.jp|Japan|99|1
-ne.jp|Japan|99|1
-gr.jp|Japan|99|1
-tokyo.jp|Japan|48|1
-kyoto.jp|Japan|48|1
-osaka.jp|Japan|48|1
-akita.jp|Japan|48|1
-saga.jp|Japan|48|1
-jo|Jordan|299|1
-com.jo|Jordan|209|1
-kz|Kazakhstan|39|1
-com.kz|Kazakhstan|39|1
-org.kz|Kazakhstan|39|1
-com.kw|Kuwait|179|1
-kg|Kyrgyzstan|130|1
-com.kg|Kyrgyzstan|20|1
-la|Laos|45|1
-com.lb|Lebanon|198|1
-net.lb|Lebanon|244|1
-org.lb|Lebanon|244|1
-mo|Macao|599|1
-com.mo|Macao|599|1
-my|Malaysia|49|1
-com.my|Malaysia|64|1
-net.my|Malaysia|74|1
-org.my|Malaysia|74|1
-biz.my|Malaysia|74|1
-mv|Maldives|265|1
-com.mv|Maldives|265|1
-mn|Mongolia|67|1
-com.np|Nepal|67|1
-om|Oman|269|1
-com.om|Oman|269|1
-co.om|Oman|269|1
-pk|Pakistan|37|2
-com.pk|Pakistan|37|2
-ps|Palestine|85|1
-com.ps|Palestine|52|1
-net.ps|Palestine|52|1
-org.ps|Palestine|52|1
-ph|Philippines|90|1
-com.ph|Philippines|67|1
-net.ph|Philippines|67|1
-org.ph|Philippines|67|1
-qa|Qatar|17|1
-com.qa|Qatar|17|1
-net.qa|Qatar|17|1
-sa|Saudi Arabia|249|1
-com.sa|Saudi Arabia|249|1
-sg|Singapore|49|1
-com.sg|Singapore|49|1
-kr|South Korea|48|1
-co.kr|South Korea|48|1
-or.kr|South Korea|48|1
-ne.kr|South Korea|48|1
-lk|Sri Lanka|55|1
-com.lk|Sri Lanka|55|1
-tw|Taiwan|29|1
-com.tw|Taiwan|29|1
-tj|Tajikistan|52|1
-com.tj|Tajikistan|52|1
-co.tj|Tajikistan|52|1
-in.th|Thailand|86|1
-co.th|Thailand|68|1
-com.tr|Turkey|53|1
-web.tr|Turkey|53|1
-biz.tr|Turkey|53|1
-info.tr|Turkey|53|1
-tv.tr|Turkey|53|1
-gen.tr|Turkey|53|1
-tr|Turkey|53|1
-tm|Turkmenistan|419|1
-ae|United Arab Emirates|62|1
-uz|Uzbekistan|79|1
-com.uz|Uzbekistan|79|1
-net.uz|Uzbekistan|79|1
-co.uz|Uzbekistan|79|1
-org.uz|Uzbekistan|79|1
-vn|Vietnam|120|1
-com.vn|Vietnam|120|1
-ye|Yemen|499|1
-com.ye|Yemen|188|1
-net.ye|Yemen|188|1
-org.ye|Yemen|188|1
+af|Afghanistan|104|104|1
+com.af|Afghanistan|74|74|1
+am|Armenia|79|79|1
+com.am|Armenia|104|104|1
+net.am|Armenia|104|104|1
+org.am|Armenia|104|104|1
+co.am|Armenia|104|104|1
+asia|Asia|16|16|1
+az|Azerbaijan|431|431|1
+com.az|Azerbaijan|431|431|1
+net.az|Azerbaijan|422|422|1
+org.az|Azerbaijan|422|422|1
+co.az|Azerbaijan|431|431|1
+biz.az|Azerbaijan|363|363|1
+info.az|Azerbaijan|363|363|1
+name.az|Azerbaijan|363|363|1
+bh|Bahrain|149|149|1
+com.bh|Bahrain|199|199|1
+bd|Bangladesh|88|88|1
+com.bd|Bangladesh|50|50|2
+net.bd|Bangladesh|50|50|2
+org.bd|Bangladesh|50|50|2
+io|British Indian Ocean Territory|59|63|1
+com.bn|Brunei|240|240|1
+bn|Brunei|240|240|1
+cn|China|34|34|1
+com.cn|China|34|34|1
+net.cn|China|34|34|1
+org.cn|China|34|34|1
+sh.cn|China|34|34|1
+bj.cn|China|41|41|1
+tl|East Timor|142|142|1
+com.tl|East Timor|41|41|1
+ge|Georgia|62|62|1
+com.ge|Georgia|42|42|1
+hk|Hong Kong|30|30|1
+com.hk|Hong Kong|34|34|1
+net.hk|Hong Kong|30|30|1
+in|India|25|25|1
+co.in|India|25|25|1
+net.in|India|25|25|1
+gen.in|India|25|25|1
+org.in|India|25|25|1
+id|Indonesia|89|89|1
+web.id|Indonesia|94|94|1
+co.id|Indonesia|78|78|1
+biz.id|Indonesia|94|94|1
+my.id|Indonesia|94|94|1
+iq|Iraq|298|298|1
+com.iq|Iraq|298|298|1
+co.il|Israel|52|52|1
+org.il|Israel|62|62|1
+jp|Japan|48|48|1
+co.jp|Japan|99|99|1
+ne.jp|Japan|99|99|1
+gr.jp|Japan|99|99|1
+tokyo.jp|Japan|48|48|1
+kyoto.jp|Japan|48|48|1
+osaka.jp|Japan|48|48|1
+akita.jp|Japan|48|48|1
+saga.jp|Japan|48|48|1
+jo|Jordan|299|299|1
+com.jo|Jordan|209|209|1
+kz|Kazakhstan|39|39|1
+com.kz|Kazakhstan|39|39|1
+org.kz|Kazakhstan|39|39|1
+com.kw|Kuwait|179|179|1
+kg|Kyrgyzstan|130|130|1
+com.kg|Kyrgyzstan|20|20|1
+la|Laos|45|45|1
+com.lb|Lebanon|198|198|1
+net.lb|Lebanon|244|244|1
+org.lb|Lebanon|244|244|1
+mo|Macao|599|599|1
+com.mo|Macao|599|599|1
+my|Malaysia|49|49|1
+com.my|Malaysia|64|64|1
+net.my|Malaysia|74|74|1
+org.my|Malaysia|74|74|1
+biz.my|Malaysia|74|74|1
+mv|Maldives|265|265|1
+com.mv|Maldives|265|265|1
+mn|Mongolia|67|67|1
+com.np|Nepal|67|67|1
+om|Oman|269|269|1
+com.om|Oman|269|269|1
+co.om|Oman|269|269|1
+pk|Pakistan|37|37|2
+com.pk|Pakistan|37|37|2
+ps|Palestine|85|85|1
+com.ps|Palestine|52|52|1
+net.ps|Palestine|52|52|1
+org.ps|Palestine|52|52|1
+ph|Philippines|90|90|1
+com.ph|Philippines|67|67|1
+net.ph|Philippines|67|67|1
+org.ph|Philippines|67|67|1
+qa|Qatar|17|29|1
+com.qa|Qatar|17|29|1
+net.qa|Qatar|17|29|1
+sa|Saudi Arabia|249|249|1
+com.sa|Saudi Arabia|249|249|1
+sg|Singapore|49|49|1
+com.sg|Singapore|49|49|1
+kr|South Korea|48|48|1
+co.kr|South Korea|48|48|1
+or.kr|South Korea|48|48|1
+ne.kr|South Korea|48|48|1
+lk|Sri Lanka|55|55|1
+com.lk|Sri Lanka|55|55|1
+tw|Taiwan|29|29|1
+com.tw|Taiwan|29|29|1
+tj|Tajikistan|52|52|1
+com.tj|Tajikistan|52|52|1
+co.tj|Tajikistan|52|52|1
+in.th|Thailand|86|86|1
+co.th|Thailand|68|68|1
+com.tr|Turkey|53|53|1
+web.tr|Turkey|53|53|1
+biz.tr|Turkey|53|53|1
+info.tr|Turkey|53|53|1
+tv.tr|Turkey|53|53|1
+gen.tr|Turkey|53|53|1
+tr|Turkey|53|53|1
+tm|Turkmenistan|419|659|1
+ae|United Arab Emirates|62|62|1
+uz|Uzbekistan|79|79|1
+com.uz|Uzbekistan|79|79|1
+net.uz|Uzbekistan|79|79|1
+co.uz|Uzbekistan|79|79|1
+org.uz|Uzbekistan|79|79|1
+vn|Vietnam|120|120|1
+com.vn|Vietnam|120|120|1
+ye|Yemen|499|499|1
+com.ye|Yemen|188|188|1
+net.ye|Yemen|188|188|1
+org.ye|Yemen|188|188|1
 #Oceania
-as|American Samoa|92|2
-au|Australia|41|1
-com.au|Australia|22|1
-net.au|Australia|22|1
-cx|Christmas Island|32|1
-cc|Cocos Island|20|1
-co.ck|Cook Islands|253|2
-com.fj|Fiji|151|1
-pf|French Polynesia|209|1
-hm|Heard and McDonald Islands|65|1
-ki|Kiribati|1451|1
-com.ki|Kiribati|226|1
-net.ki|Kiribati|226|1
-org.ki|Kiribati|226|1
-biz.ki|Kiribati|226|1
-tel.ki|Kiribati|226|1
-info.ki|Kiribati|226|1
-fm|Micronesia|117|1
-nr|Nauru Island|740|1
-com.nr|Nauru Island|146|1
-nc|New Caledonia|131|2
-nz|New Zealand|29|1
-co.nz|New Zealand|29|1
-net.nz|New Zealand|29|1
-org.nz|New Zealand|29|1
-kiwi.nz|New Zealand|29|1
-maori.nz|New Zealand|29|1
-nu|Niue|48|1
-nf|Norfolk Islands|266|1
-com.nf|Norfolk Islands|127|1
-net.nf|Norfolk Islands|127|1
-mp|Northern Mariana Islands|49|1
-pn|Pitcairn Island|209|1
-co.pn|Pitcairn Island|147|1
-net.pn|Pitcairn Island|147|1
-org.pn|Pitcairn Island|147|1
-ws|Samoa|29|1
-sb|Solomon Islands|88|1
-com.sb|Solomon Islands|88|1
-to|Tonga|78|1
-vu|Vanuatu|89|1
-com.vu|Vanuatu|125|1
-wf|Wallis and Futuna|16|1
+as|American Samoa|92|92|2
+au|Australia|41|41|1
+com.au|Australia|22|22|1
+net.au|Australia|22|22|1
+cx|Christmas Island|32|32|1
+cc|Cocos Island|20|20|1
+co.ck|Cook Islands|253|253|2
+com.fj|Fiji|151|151|1
+pf|French Polynesia|209|209|1
+hm|Heard and McDonald Islands|65|65|1
+ki|Kiribati|1451|1451|1
+com.ki|Kiribati|226|226|1
+net.ki|Kiribati|226|226|1
+org.ki|Kiribati|226|226|1
+biz.ki|Kiribati|226|226|1
+tel.ki|Kiribati|226|226|1
+info.ki|Kiribati|226|226|1
+fm|Micronesia|117|117|1
+nr|Nauru Island|740|740|1
+com.nr|Nauru Island|146|146|1
+nc|New Caledonia|131|131|2
+nz|New Zealand|29|29|1
+co.nz|New Zealand|29|29|1
+net.nz|New Zealand|29|29|1
+org.nz|New Zealand|29|29|1
+kiwi.nz|New Zealand|29|29|1
+maori.nz|New Zealand|29|29|1
+nu|Niue|48|48|1
+nf|Norfolk Islands|266|266|1
+com.nf|Norfolk Islands|127|127|1
+net.nf|Norfolk Islands|127|127|1
+mp|Northern Mariana Islands|49|49|1
+pn|Pitcairn Island|209|209|1
+co.pn|Pitcairn Island|147|147|1
+net.pn|Pitcairn Island|147|147|1
+org.pn|Pitcairn Island|147|147|1
+ws|Samoa|29|29|1
+sb|Solomon Islands|88|88|1
+com.sb|Solomon Islands|88|88|1
+to|Tonga|78|78|1
+vu|Vanuatu|89|89|1
+com.vu|Vanuatu|125|125|1
+wf|Wallis and Futuna|17|17|1
 #Generic
-aero|Generic|100|1
-biz|Generic|23|1
-cat|Generic|30|1
-com|Generic|14|1
-coop|Generic|88|1
-edu|Generic|169|1
-radio.am|Generic|28|1
-radio.fm|Generic|28|1
-info|Generic|6|1
-int|Generic|124|1
-jobs|Generic|188|1
-ly|Generic|104|1
-mobi|Generic|9|1
-museum|Generic|75|1
-name|Generic|10|1
-net|Generic|16|1
-org|Generic|10|1
-pro|Generic|4|1
-law.pro|Generic|252|1
-med.pro|Generic|252|1
-eng.pro|Generic|252|1
-cpa.pro|Generic|252|1
-tel|Generic|19|1
-travel|Generic|39|1
-tv|Generic|33|1
-xxx|Generic|124|1
-pw|Generic|21|1
+aero|Generic|100|100|1
+ai|Generic|100|100|2
+com.ai|Generic|100|100|2
+am|Generic|79|79|1
+radio.am|Generic|28|28|1
+biz|Generic|23|23|1
+cat|Generic|30|30|1
+cc|Generic|20|20|1
+co|Generic|39|39|1
+com|Generic|15|15|1
+coop|Generic|88|88|1
+edu|Generic|169|169|1
+fm|Generic|117|117|1
+radio.fm|Generic|28|28|1
+info|Generic|6|23|1
+int|Generic|124|124|1
+jobs|Generic|188|188|1
+la|Generic|45|45|1
+ly|Generic|104|104|1
+me|Generic|19|19|1
+mobi|Generic|9|43|1
+museum|Generic|75|75|1
+name|Generic|10|10|1
+net|Generic|16|16|1
+org|Generic|10|16|1
+pro|Generic|4|29|1
+law.pro|Generic|252|252|1
+med.pro|Generic|252|252|1
+eng.pro|Generic|252|252|1
+cpa.pro|Generic|252|252|1
+tel|Generic|19|19|1
+tm|Generic|419|659|1
+travel|Generic|39|171|1
+tv|Generic|33|33|1
+ws|Generic|29|29|1
+xxx|Generic|124|124|1
+pw|Professional Web|21|21|1
 #Alternative
-br.com|Brazil|52|1
-cn.com|China|52|1
-eu.com|European Union|20|1
-de.com|Germany|20|1
-gb.net|Great Britain|25|1
-gr.com|Greece|29|1
-hk.com|Hong Kong|20|1
-hu.net|Hungary|41|1
-jpn.com|Japan|47|1
-jp.net|Japan|10|1
-mex.com|Mexico|20|1
-ru.com|Russian Federation|235|1
-sa.com|Saudi Arabia|443|1
-za.com|South Africa|443|1
-se.net|Sweden|42|1
-ae.org|United Arab Emirates|29|1
-uk.com|United Kingdom|41|1
-uk.net|United Kingdom|41|1
-us.com|USA|23|1
-us.org|USA|29|1
+br.com|Brazil|52|52|1
+cn.com|China|52|52|1
+eu.com|European Union|20|20|1
+de.com|Germany|20|20|1
+gb.net|Great Britain|25|25|1
+gr.com|Greece|29|29|1
+hk.com|Hong Kong|20|20|1
+hu.net|Hungary|41|41|1
+jpn.com|Japan|47|47|1
+jp.net|Japan|10|10|1
+mex.com|Mexico|20|20|1
+ru.com|Russian Federation|235|235|1
+sa.com|Saudi Arabia|443|443|1
+za.com|South Africa|443|443|1
+se.net|Sweden|42|42|1
+ae.org|United Arab Emirates|29|29|1
+uk.com|United Kingdom uk|41|41|1
+uk.net|United Kingdom uk|41|41|1
+us.com|USA|23|23|1
+us.org|USA|29|29|1

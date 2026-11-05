@@ -352,13 +352,17 @@ test("the shipped tables carry four registrars, each dated, no zero prices, and 
   assert.equal(tables.tlds["com.br"].cc, "BR");
   assert.equal(tables.tlds.edu, undefined, ".edu is not for sale");
 });
-test("data/marcaria.json: the two lists read off Marcaria's site, one price per year each", async () => {
+test("data/marcaria.json: the two lists copied off Marcaria's site, a first year and a renewal each", async () => {
   const { readFileSync } = await import("node:fs");
   const m = JSON.parse(readFileSync(new URL("../data/marcaria.json", import.meta.url), "utf8"));
   assert.match(m.asOf, /^\d{4}-\d{2}-\d{2}$/);
   assert.ok(Object.keys(m.tlds).length >= 1000, `only ${Object.keys(m.tlds).length} extensions`);
-  for (const [tld, p] of Object.entries(m.tlds)) assert.ok(Array.isArray(p) && p[0] > 0 && p[0] === p[1], `${tld}: ${JSON.stringify(p)}`);
+  // A discount is on the first year only; the struck-through figure is the renewal.
+  for (const [tld, p] of Object.entries(m.tlds)) assert.ok(Array.isArray(p) && p[0] > 0 && p[1] >= p[0], `${tld}: ${JSON.stringify(p)}`);
+  assert.ok(Object.values(m.tlds).some(([first, renew]) => first < renew), "no discounted first year: the renewal column is being read as the first year again");
   assert.deepEqual(m.tlds["com.br"], [29, 29]);
+  assert.deepEqual(m.tlds.coffee, [23, 50]);
+  assert.deepEqual(m.tlds.eu, [9, 11]);
   assert.equal(m.years.ai, 2);
   assert.equal(m.tlds.edu, undefined);
   assert.equal(m.tlds.int, undefined);
