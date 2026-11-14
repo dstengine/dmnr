@@ -74,6 +74,6 @@ jobs:
           git commit -q -m "Prices refreshed: $changed ($(date -u +%F))"
           npm run build --silent          # dates src/updated.txt by the commit above
           git add src/updated.txt
-          git commit -q --amend --no-edit
+          GIT_COMMITTER_DATE="$(git log -1 --format=%cI)" git commit -q --amend --no-edit   # same date as the stamp
           git push
           echo "pushed: $changed"

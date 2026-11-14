@@ -6,6 +6,7 @@ import sharp from "sharp";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const src = (f) => new URL(`./src/${f}`, import.meta.url);
 const data = (f) => new URL(`./data/${f}`, import.meta.url);
@@ -137,24 +138,32 @@ writeFileSync(dist("index.html"), readFileSync(src("index.html"), "utf8")
   .replaceAll("__COUNTRIES__", `${Math.floor(Object.keys(named).length / 10) * 10}+`)
   .replaceAll("__ASOF__", asOf));
 
-// The page is dated by the last commit that changed what it shows (src/ and
-// the price tables), not by the build: a date that is always "now" is worse
-// than none. Where git cannot say, the date is kept in src/updated.txt,
-// which every local build refreshes from git. A CLI upload carries no .git;
-// a git build on Vercel is a shallow clone, whose oldest commit has no
-// parent, so git says that commit changed every file — its date is no
-// evidence, and a page unchanged for weeks would claim today. Any other
-// commit git names did change the files.
+// The page is dated by what it shows (its copy in this file, src/ and the
+// price tables), not by the build: a date that is always "now" is worse
+// than none. It is the last commit that changed those files,
+// read from this folder's own repository. Where git cannot say (a CLI upload
+// has no .git) it is src/updated.txt, which every build that trusts git
+// refreshes, so commit it. A git build on Vercel is a shallow clone: its
+// oldest commit has no parent, so git names it for every file the clone
+// never saw change, and its date only bounds the truth from above; there the
+// stamp is used, capped at that date. A commit with a parent did change them.
 const stampFile = src("updated.txt");
-const git = (args) => execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-let updated;
+const root = fileURLToPath(new URL(".", import.meta.url));
+const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/;
+const stamp = (() => { try { const s = readFileSync(stampFile, "utf8").trim(); return ISO.test(s) ? s : undefined; } catch {} })();
+const git = (args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+let updated = stamp;
 try {
-  const [hash, date] = git(["log", "-1", "--format=%H %cI", "--", "src/", "data/", ":!src/updated.txt"]).split(" ");
-  const boundary = git(["rev-parse", "--is-shallow-repository"]) === "true" ? readFileSync(`${git(["rev-parse", "--absolute-git-dir"])}/shallow`, "utf8").split("\n") : [];
-  if (hash && !boundary.includes(hash)) updated = date;
+  if (git(["rev-parse", "--show-prefix"]) === "") {
+    const [, parents, date] = git(["log", "-1", "--no-show-signature", "--format=%H%x09%P%x09%cI", "--", "build.mjs", "src/", "data/", ":!src/updated.txt"]).split("\t");
+    if (ISO.test(date ?? "")) {
+      if (parents || git(["rev-parse", "--is-shallow-repository"]) === "false") {
+        updated = date;
+        if (date !== stamp) writeFileSync(stampFile, date + "\n");
+      } else if (stamp && Date.parse(stamp) > Date.parse(date)) updated = date;
+    }
+  }
 } catch {}
-if (updated) writeFileSync(stampFile, updated + "\n");
-else if (existsSync(stampFile)) updated = readFileSync(stampFile, "utf8").trim();
 writeFileSync(dist("robots.txt"), `User-agent: *\nAllow: /\nDisallow: /go/\nDisallow: /api/\n\nSitemap: ${SITE}sitemap.xml\n`);
 writeFileSync(dist("sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
