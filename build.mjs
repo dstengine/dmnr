@@ -147,16 +147,19 @@ writeFileSync(dist("index.html"), readFileSync(src("index.html"), "utf8")
 // oldest commit has no parent, so git names it for every file the clone
 // never saw change, and its date only bounds the truth from above; there the
 // stamp is used, capped at that date. A commit with a parent did change them.
+// git gets no GIT_* variables: GIT_DIR would point it at another repository.
 const stampFile = src("updated.txt");
 const root = fileURLToPath(new URL(".", import.meta.url));
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/;
-const stamp = (() => { try { const s = readFileSync(stampFile, "utf8").trim(); return ISO.test(s) ? s : undefined; } catch {} })();
-const git = (args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+const isDate = (s) => ISO.test(s) && !Number.isNaN(Date.parse(s));
+const stamp = (() => { try { const s = readFileSync(stampFile, "utf8").trim(); return isDate(s) ? s : undefined; } catch {} })();
+const gitEnv = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith("GIT_")));
+const git = (args) => execFileSync("git", args, { cwd: root, env: gitEnv, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
 let updated = stamp;
 try {
   if (git(["rev-parse", "--show-prefix"]) === "") {
     const [, parents, date] = git(["log", "-1", "--no-show-signature", "--format=%H%x09%P%x09%cI", "--", "build.mjs", "src/", "data/", ":!src/updated.txt"]).split("\t");
-    if (ISO.test(date ?? "")) {
+    if (isDate(date ?? "")) {
       if (parents || git(["rev-parse", "--is-shallow-repository"]) === "false") {
         updated = date;
         if (date !== stamp) writeFileSync(stampFile, date + "\n");

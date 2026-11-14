@@ -54,7 +54,11 @@ npm run serve     # http://localhost:4174/ with api/check mounted
 Deploys go through git push: the Vercel project `dmnr` is linked to
 [github.com/dstengine/dmnr](https://github.com/dstengine/dmnr), and every
 push to `main` builds and deploys. `vercel deploy --prod` from this
-directory still works for a one-off. The `/go/` links are redirects to the
+directory still works for a one-off. A git build on Vercel is a shallow
+clone and may take the page's date from `src/updated.txt`, so commit it
+after any build that moved it. A conflict on that file (a rebase over the
+weekly prices commit) is settled by running the build, never by picking a
+side. The `/go/` links are redirects to the
 registrars' own search pages and are kept out of robots.txt.
 
 ## How a name is checked
