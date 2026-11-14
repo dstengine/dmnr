@@ -43,8 +43,9 @@ let gdAsOf = "";
 for (const [tld, v] of Object.entries(godaddy.tlds)) {
   if (!sold(v.price) || !real(tld)) continue;
   (tlds[tld] ??= { pb: null, gd: null, dd: null, mc: null, rdap: rdapFor(tld) }).gd = v.price;
-  if (v.asOf > gdAsOf) gdAsOf = v.asOf;
+  if (!gdAsOf || v.asOf < gdAsOf) gdAsOf = v.asOf;   // the oldest: a pass cut short keeps older rows
 }
+if (!gdAsOf) throw new Error("no GoDaddy row is priced and sold: has data/godaddy.json lost its prices, or is data/iana.json not the root zone list?");
 for (const [tld, price] of Object.entries(dynadot.tlds)) {
   if (!sold(price) || !real(tld)) continue;
   (tlds[tld] ??= { pb: null, gd: null, dd: null, mc: null, rdap: rdapFor(tld) }).dd = price;

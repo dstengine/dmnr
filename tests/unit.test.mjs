@@ -1,14 +1,15 @@
 // The parts with no browser in them: what typed text means, how rows are
 // ordered, how the votes make a verdict, how prices print, where an
-// extension's RDAP server is, what the registrars' answers mean, what the
-// api/check and api/avail handlers refuse, and what the service worker
-// precaches. Run: npm run build && npm test
+// extension's RDAP server is, what the registrars' answers mean, how
+// Dynadot's price page is read, what the api/check and api/avail handlers
+// refuse, and what the service worker precaches. Run: npm run build && npm test
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { best, countryOptions, explain, icannReserved, inCountry, lengthBucket, money, order, parse, rdapFor, rdapVote, shortLabelHint, verdict } from "../src/model.ts";
 import { answer404, refusal } from "../src/refusal.js";
 import { askAll, enabled, parseDynadot, parseGandi, parseGodaddy, parseNamecom, parseNamesilo, parsePorkbun, parseSpaceship } from "../src/providers.js";
+import { dynadotTable } from "../tools/prices.mjs";
 import check from "../api/check.js";
 import avail, { MAX } from "../api/avail.js";
 
@@ -184,6 +185,74 @@ test("parseDynadot: yes/no, and the busy answers are silence", () => {
     { DomainName: "a.com", Available: "yes", Price: "9.99 in USD" }, { DomainName: "b.com", Available: "no" }, { DomainName: "c.com", Available: "over_quota" },
   ] } }, ["a.com", "b.com", "c.com", "d.com"]), { "a.com": "free", "b.com": "taken", "c.com": "silent", "d.com": "silent" });
 });
+// A page shaped like Dynadot's: a Nuxt payload, one flat array in which
+// objects and arrays hold indexes into it, and Reactive wraps a value.
+const nuxtPage = (root) => {
+  const flat = [];
+  const put = (v) => {
+    const i = flat.length; flat.push(null);
+    if (v && v.$reactive) flat[i] = ["Reactive", put(v.$reactive)];
+    else if (Array.isArray(v)) flat[i] = v.map(put);
+    else if (v && typeof v === "object") flat[i] = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, put(x)]));
+    else flat[i] = v;
+    return i;
+  };
+  put(root);
+  return `<html><title>Domain Prices</title><script type="application/json" data-ssr="true" id="__NUXT_DATA__">${JSON.stringify(flat)}</script></html>`;
+};
+const row = (name, reg, ren, sale = {}, currency = "USD") => ({ name, name_utf: name, reg_price: reg, original_reg_price: sale.reg ?? "-1", renew_price: ren, original_renew_price: sale.ren ?? "-1", google_data: { price: reg.replace("$", ""), currency } });
+test("dynadotTable: every row wherever the page nests it, at the standard price, the table beating a promo card", () => {
+  let deep = { rows: [{ heading: "Popular" }, row("com", "$11.62", "$11.62"), row("SHOP", "$1.99", "$29.99", { reg: "$29.99" }), row("rich", "$1,250.00", "$1,250.00"), row("gone", "$5.00", "-"), row("mx", "$230.00", "$230.00", {}, "MXN")] };
+  for (let i = 0; i < 15; i++) deep = { $reactive: { level: i, inner: deep } };
+  const promo = [row("com", "$0.99", "$0.99"), row("rich", "$9.00", "$9.00")];
+  for (const [html, clashed] of [
+    [nuxtPage({ $reactive: { banner: { title: "Sale" }, promo, page: deep } }), ["com", "rich"]],
+    [nuxtPage({ $reactive: { banner: { title: "Sale" }, page: deep, promo } }), ["com", "rich"]],
+    [nuxtPage({ $reactive: { featured: row("com", "$0.99", "$0.99"), page: deep } }), ["com"]],
+  ]) {
+    const { tlds, clashes, unsettled, foreign } = dynadotTable(html);
+    assert.deepEqual(tlds, { com: [11.62, 11.62], shop: [29.99, 29.99], rich: [1250, 1250] });
+    assert.deepEqual(clashes.sort(), clashed, "a promo priced unlike the table is reported, not taken");
+    assert.deepEqual(unsettled.sort(), clashed, "a five-row table is no whole table: the read is not trusted to settle it");
+    assert.deepEqual(foreign, { MXN: 1 });
+  }
+});
+test("dynadotTable: a table keyed by extension weighs like a list, a currency in any case is read as one, one price twice is no clash", () => {
+  const table = Object.fromEntries(["com", "net", "org"].map((n) => [n, row(n, "$10.00", "$12.00")]));
+  const { tlds, clashes, foreign } = dynadotTable(nuxtPage({ $reactive: { promo: [row("com", "$1.00", "$1.00")], table, again: [row("net", "$10.00", "$12.00")] } }));
+  assert.deepEqual(tlds, { com: [10, 12], net: [10, 12], org: [10, 12] });
+  assert.deepEqual(clashes, ["com"]);
+  assert.deepEqual(foreign, {});
+  const lower = dynadotTable(nuxtPage({ rows: [row("com", "$9.00", "$9.00", {}, " usd "), row("de", "$5.00", "$5.00", {}, "eur")] }));
+  assert.deepEqual(lower.tlds, { com: [9, 9] });
+  assert.deepEqual(lower.foreign, { EUR: 1 });
+});
+test("dynadotTable: only a whole table settles a clash, whatever the number of promo rows", () => {
+  const names = Array.from({ length: 520 }, (_, i) => (i ? `t${i}` : "com"));
+  const table = names.map((n) => row(n, "$10.00", "$12.00"));
+  const deals = ["com", "t1", "t2", "t3", "t4", "t5", "t6"].map((n) => row(n, "$0.99", "$0.99"));
+  const whole = dynadotTable(nuxtPage({ $reactive: { deals, table } }));
+  assert.equal(Object.keys(whole.tlds).length, 520);
+  assert.deepEqual(whole.tlds.com, [10, 12]);
+  assert.equal(whole.clashes.length, 7);
+  assert.deepEqual(whole.unsettled, []);
+  // The same rows split into lists of 300, 215 and 5, and a 21-row promo
+  // list longer than the last of them: the promo would win, so it is unsettled.
+  const popular = [...table.slice(0, 20), row("t516", "$0.99", "$0.99")];
+  const split = dynadotTable(nuxtPage({ $reactive: { popular, a: table.slice(0, 300), b: table.slice(300, 515), c: table.slice(515) } }));
+  assert.deepEqual(split.clashes, ["t516"]);
+  assert.deepEqual(split.unsettled, ["t516"]);
+  // Two whole tables at odds settle nothing either.
+  const twice = dynadotTable(nuxtPage({ $reactive: { a: table, b: names.map((n) => row(n, n === "t9" ? "$1.00" : "$10.00", "$12.00")) } }));
+  assert.deepEqual(twice.unsettled, ["t9"]);
+});
+test("dynadotTable: a page with no table reads as empty, not as an error", () => {
+  const none = { tlds: {}, clashes: [], unsettled: [], foreign: {} };
+  assert.deepEqual(dynadotTable("<html><title>Just a moment...</title></html>"), none);
+  assert.deepEqual(dynadotTable('<script id="__NUXT_DATA__" type="application/json">[{"name":</script>'), none);
+  assert.deepEqual(dynadotTable('<script id="__NUXT_DATA__" type="application/json">{"name":"com"}</script>'), none);
+  assert.deepEqual(dynadotTable(nuxtPage({ $reactive: { page: { rows: [] }, error: { statusCode: 500 } } })), none);
+});
 test("GoDaddy: when the bulk call is over its monthly quota, the names are asked one by one", async () => {
   const calls = [];
   const fetcher = async (url) => {
@@ -286,10 +355,14 @@ test("api/check refuses what is not a domain", async () => {
     assert.equal((await call({ domain })).code, 400, domain);
   }
 });
-test("api/check knows the servers the bootstrap lacks", async () => {
+test("api/check knows the servers the bootstrap lacks", async (t) => {
   // nic.io is registered; a 200 from Identity Digital says so (network).
+  // A registry that does not answer (it rate-limits with 429) skips the
+  // network half rather than failing: the weekly prices run gates its
+  // commit on these tests, and one server's limit must not cost the week.
   const out = await call({ domain: "nic.io" });
   assert.equal(out.body.server, "https://rdap.identitydigital.services/rdap/");
+  if (out.body.registered === null) return t.skip(`the registry did not answer (${out.body.status ?? out.body.error})`);
   assert.equal(out.body.registered, true);
 });
 test("api/check answers null where no registry publishes RDAP", async () => {

@@ -11,6 +11,17 @@
 # Nothing is committed unless the build and the tests pass on the new
 # tables, and the date on the page (src/updated.txt, which the build takes
 # from git) is the date of the commit that carries them.
+#
+# A source that fails does not hold the others back: theirs are still
+# built, tested and committed, and the run turns red at the end, naming it.
+# Each source has a time limit (GoDaddy 25 minutes, the others 10) and
+# writes its table whole or not at all. Porkbun, Dynadot, RDAP and IANA
+# write only when the whole read worked and looked like the whole list, so
+# a failed one keeps its old table; GoDaddy keeps the rows it read before it
+# stopped, each dated, never fewer than 500 prices, and the page dates
+# GoDaddy by its oldest row. Any page Dynadot's read turned down, even one a
+# later try got past, goes into the run's artifacts (prices-pages). On
+# 9 Nov 2026 one Dynadot failure lost the whole week.
 name: prices
 on:
   schedule:
@@ -27,7 +38,7 @@ concurrency: prices
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 75   # each source is bounded below: GoDaddy 25 min, the others 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,10 +61,32 @@ jobs:
           echo "jobs=$jobs" >> "$GITHUB_OUTPUT"
           echo "sources: $jobs"
       - name: Refresh the tables
+        id: refresh
         env:
           GODADDY_API_KEY: ${{ secrets.GODADDY_API_KEY }}
+          JOBS: ${{ steps.pick.outputs.jobs }}
+          PRICES_PAGES: ${{ runner.temp }}/prices-pages
         run: |
-          for j in ${{ steps.pick.outputs.jobs }}; do node tools/prices.mjs "$j"; done
+          failed=""
+          for j in $JOBS; do
+            case $j in godaddy) limit=25m ;; *) limit=10m ;; esac
+            rc=0; timeout "$limit" node tools/prices.mjs "$j" || rc=$?
+            if [ "$rc" -ne 0 ]; then
+              failed="$failed $j"
+              if [ "$rc" -eq 124 ]; then why="it ran past $limit and was stopped"; else why="the reason is in the lines above"; fi
+              echo "::error title=$j was not refreshed::$why; the other sources go on"
+            fi
+          done
+          echo "failed=${failed# }" >> "$GITHUB_OUTPUT"
+      - name: Keep the pages Dynadot's read turned down
+        continue-on-error: true   # a diagnostic must never cost the other tables their commit
+        uses: actions/upload-artifact@v4
+        with:
+          name: prices-pages
+          path: ${{ runner.temp }}/prices-pages
+          if-no-files-found: ignore
+          overwrite: true
+          retention-days: 30
       - name: Build and test on the new tables
         run: |
           npm run build
@@ -77,3 +110,23 @@ jobs:
           GIT_COMMITTER_DATE="$(git log -1 --format=%cI)" git commit -q --amend --no-edit   # same date as the stamp
           git push
           echo "pushed: $changed"
+      - name: Name the sources that were not refreshed
+        if: always() && steps.refresh.outputs.failed != ''   # also when the build or the commit failed
+        env:
+          FAILED: ${{ steps.refresh.outputs.failed }}
+          JOBS: ${{ steps.pick.outputs.jobs }}
+          PAGES: ${{ runner.temp }}/prices-pages
+        run: |
+          for j in $FAILED; do
+            if [ "$j" = godaddy ]; then
+              node -p "const t = Object.values(JSON.parse(require('fs').readFileSync('data/godaddy.json')).tlds).filter((r) => r.price), d = t.reduce((m, r) => (r.asOf ?? '') > m ? r.asOf : m, ''), k = t.filter((r) => r.asOf === d).length; 'godaddy: ' + k + ' of ' + t.length + ' prices read on ' + d + (k < t.length ? ', the rest kept from earlier passes' : '')"
+            elif [ -f "data/$j.json" ]; then
+              echo "$j: data/$j.json is still the table of $(node -p "JSON.parse(require('fs').readFileSync('data/$j.json')).asOf")"
+            fi
+          done
+          others=""
+          for j in $JOBS; do case " $FAILED " in *" $j "*) ;; *) others=1 ;; esac; done
+          if [ -n "$others" ]; then went="The other tables went through; the"; else went="No table was refreshed; the"; fi
+          if [ -n "$(ls -A "$PAGES" 2>/dev/null)" ]; then pages=", and the pages Dynadot's read turned down are in the artifact prices-pages"; else pages=""; fi
+          echo "::error title=Not refreshed: $FAILED::$went reason is in the step Refresh the tables$pages."
+          exit 1

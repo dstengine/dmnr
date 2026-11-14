@@ -18,7 +18,10 @@ kept to one country's extensions, and every country-code row names its country.
   `.github/workflows/prices.yml` reads the keyless sources every Monday and GoDaddy
   on the first of the month (the key as the repository secret `GODADDY_API_KEY`),
   builds, tests, and commits what moved to `main`, which deploys — so pull before
-  you push. `node tools/countries.mjs` rewrites the country
+  you push. A source that fails keeps its old table and turns the run red at the
+  end, naming it, while the others still go through; the pages Dynadot's read
+  turned down are kept as the run's artifact `prices-pages`, 30 days.
+  `node tools/countries.mjs` rewrites the country
   table from the root-zone list: ISO codes named by CLDR, the internationalised
   country-code extensions by hand. `node tools/marcaria.mjs` rebuilds Marcaria's
   table from `data/marcaria-countries.txt` and `data/marcaria-gtlds.txt`, two lists
