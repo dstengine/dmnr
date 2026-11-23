@@ -1,6 +1,6 @@
 {
- "asOf": "2026-11-16",
- "publication": "2026-10-28T22:00:04Z",
+ "asOf": "2026-11-23",
+ "publication": "2026-11-20T23:00:03Z",
  "tlds": {
   "kg": "http://rdap.cctld.kg/",
   "mg": "http://rdap.nic.mg/",
@@ -514,6 +514,7 @@
   "pnc": "https://rdap.identitydigital.services/rdap/",
   "poker": "https://rdap.identitydigital.services/rdap/",
   "post": "https://rdap.identitydigital.services/rdap/",
+  "pr": "https://rdap.identitydigital.services/rdap/",
   "pro": "https://rdap.identitydigital.services/rdap/",
   "productions": "https://rdap.identitydigital.services/rdap/",
   "progressive": "https://rdap.identitydigital.services/rdap/",
@@ -1141,7 +1142,6 @@
   "xn--clchc0ea0b2g2a9gcd": "https://rdap.ta.sgnic.sg/rdap/",
   "anquan": "https://rdap.teleinfo.cn/",
   "shouji": "https://rdap.teleinfo.cn/",
-  "xihuan": "https://rdap.teleinfo.cn/",
   "xn--vuq861b": "https://rdap.teleinfo.cn/",
   "yun": "https://rdap.teleinfo.cn/",
   "xn--3ds443g": "https://rdap.teleinfo.cn/xn--3ds443g/",
